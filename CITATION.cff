@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use DecisiveLM, please cite it as below."
+title: "DecisiveLM: an open, calibrated System One decision model on Gemma 4"
+type: software
+authors:
+  - family-names: Richardson
+    given-names: Michael J.
+    affiliation: Macquarie University
+version: 0.0.1
+license: Apache-2.0
+repository-code: "https://github.com/xkiwilabs/decisive-lm"
+keywords:
+  - decision model
+  - calibration
+  - human disagreement
+  - Gemma 4
+  - LoRA
+# Placeholder until the companion paper is on arXiv: replace the title, add the other authors and the arXiv id
+# (identifiers: - type: doi, value: 10.48550/arXiv.XXXX.XXXXX), and set the year.
+preferred-citation:
+  type: article
+  title: "DecisiveLM: an open, calibrated System One decision model on Gemma 4"
+  authors:
+    - family-names: Richardson
+      given-names: Michael J.
+      affiliation: Macquarie University
+  journal: "arXiv preprint"
+  year: 2026

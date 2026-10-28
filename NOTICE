@@ -1,0 +1,61 @@
+DecisiveLM
+Copyright 2026 Michael J. Richardson, Macquarie University
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+-------------------------------------------------------------------------------
+Base model
+-------------------------------------------------------------------------------
+DecisiveLM adapters run on Gemma 4 (E4B and 26B A4B), developed by Google DeepMind
+and released under the Apache License, Version 2.0. No Gemma weights are included
+in this repository. See https://huggingface.co/google/gemma-4-E4B-it for the
+model's own terms and model card.
+
+-------------------------------------------------------------------------------
+Datasets
+-------------------------------------------------------------------------------
+No dataset is included in this repository. The datasets the code fetches, and the
+models trained on them, keep their own licences. The attribution each licence
+requires (authors, source, licence, and what was changed) is listed in
+docs/guide/14-datasets.md, section 14.8, and the registry configs/datasets.yaml
+records every source, licence and pinned file.
+
+-------------------------------------------------------------------------------
+Third-party text included in this repository
+-------------------------------------------------------------------------------
+decisivelm/data/converters/jev_public.py reproduces, verbatim, the label names,
+question instructions and item-sampling settings of two public benchmark
+harnesses, so that their items can be rebuilt from the original datasets. No
+model outputs from either harness are included or used.
+
+1. jevbench (https://github.com/dhruvmehra/jevbench), src/jevbench/datasets.py.
+   Licensed under the MIT License:
+
+   Copyright (c) 2026 Dhruv Mehra
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to deal
+   in the Software without restriction, including without limitation the rights
+   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+   copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all
+   copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+2. jev-vs-open-decision-models
+   (https://github.com/elcronos/jev-vs-open-decision-models),
+   datasets_registry.py and models/common.py.
+
+   No licence is published for this repository (no LICENSE file and none stated
+   in its README, checked 2026-10-27). What is reproduced from it is the label
+   names, question instructions and sampling settings needed to rebuild the same
+   evaluation items, with this attribution. It is used for evaluation only.

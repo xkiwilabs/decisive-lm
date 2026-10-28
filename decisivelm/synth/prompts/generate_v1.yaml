@@ -1,0 +1,79 @@
+# Question and state generation (SPEC §4.3 steps 1–2, DATASETS §3.2). The teacher writes JSON under a schema
+# (decisivelm.synth.generate); thinking off, sampled. {placeholders} are filled from a seeded spec per call, so the
+# variety comes from the spec, not from asking the model to be varied.
+system: |-
+  You design decision questions for a classifier that reads one input (the "state") and answers typed questions
+  about it. Every question is answered on its own: the classifier never sees the other questions, the question's
+  id, or anything except the state, the question's instructions and its options. So each question, and each
+  option description, must make sense entirely on its own.
+
+  Question types:
+  - noul: a statement about the state that is true or false. Instructions state it plainly. Options are empty,
+    or exactly two: first what counts as yes, then what counts as no.
+  - choice: pick exactly one of 2 to 20 unordered options. Each option has a short snake_case name and a
+    description. Options must not overlap unless asked for near-duplicates.
+  - score: an ordered scale of 2 to 10 levels, from the lowest to the highest amount of what the instructions
+    measure (least to most urgent, lowest to highest risk, poorest to best quality). Each level has a short name
+    and a description of what puts a state at that level.
+
+  Never number questions, never refer to "the previous question", "option A", or anything outside the question
+  itself. Write in English unless told otherwise.
+
+questions: |-
+  Domain: {domain}
+  Setting: {setting}
+  The states will be: {state_kind}
+
+  Write {n} questions that a team working in this setting would really ask about such states, in this order of
+  types: {types}.
+  {details}
+  Return JSON only.
+
+fanout: |-
+  Here is a real input from {source}:
+
+  <state>
+  {state}
+  </state>
+
+  Write {n} questions that someone handling inputs like this one could ask about any input of the same kind
+  (not just this one), in this order of types: {types}. Each must be answerable from an input like this alone.
+  {details}
+  Return JSON only.
+
+states: |-
+  Domain: {domain}
+  Setting: {setting}
+
+  These questions will be asked about each state:
+  {questions}
+
+  Write {n} different states of this kind: {state_kind}. Make them realistic and specific, as they would really
+  arrive, with no explanation of the answers. Give each the profile asked for:
+  {profiles}
+  Return JSON only.
+
+# Per-question detail lines, picked by the spec. {k} is the number of options or levels.
+style:
+  terse: "Use short option descriptions of a few words."
+  descriptive: "Give every option a one- or two-sentence description."
+  codebook: >-
+    Write it as a research or operations codebook: instructions of several sentences that set out the task and
+    the decision rules, and option descriptions that say what is included and excluded, with a short example.
+  structured: "Give each option a description and two or three short examples of states that belong to it."
+choice_extra:
+  other: >-
+    Make the last option a catch-all. Its description is read without the other options, so it must not mention
+    them ("none of the above", "the previous options"): name the topics they cover and say it applies to anything
+    outside them.
+  near_duplicate: "Include two options that are close and easy to confuse, with descriptions that tell them apart."
+noul_extra:
+  criteria: "Give the two options: what counts as yes, then what counts as no."
+  plain: "Leave the options empty."
+profiles:
+  easy: "clearly answers most of the questions"
+  borderline: "sits near the boundary for at least one question"
+  ambiguous: "leaves at least one question genuinely unclear, so careful readers could disagree"
+  irrelevant: "is of this kind but gives little or no evidence for most of the questions"
+  long: "is long and detailed (several paragraphs), with the deciding evidence in one place"
+  json: "is a JSON record (an object with realistic field names and values), as a system would export it"

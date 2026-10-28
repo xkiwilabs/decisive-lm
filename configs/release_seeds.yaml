@@ -1,0 +1,28 @@
+# Criterion 4 of docs/RELEASE.md (scripts/score_suite.py): on each seed dataset's own gold_test, against the
+# reference (the previous release, or for the first release the specialist trained on that seed alone, P3), the
+# candidate's primary metric (Choice accuracy, Noul AUROC: at most `margin` below; Score MAE, in levels: at most
+# `margin` above; the mean over a type's questions), its ECE ≤ 0.10 or not significantly above the reference's, and, on
+# tasks with ≥ 3 raters per item, its review readiness not significantly below the reference.
+margins:
+  choice: 0.03
+  noul: 0.03
+  score: 0.05
+seeds:
+  banking77:
+    data: data/processed/banking77.jsonl
+    reference: data/predictions/P3_banking77_e4b_z_r8_seed0.jsonl
+  clinc150:
+    data: data/processed/clinc150.jsonl
+    reference: data/predictions/P3_clinc150_e4b_z_r8_seed0.jsonl
+  helpsteer2:
+    data: data/processed/helpsteer2.jsonl
+    reference: data/predictions/P3_helpsteer2_e4b_z_r8_seed0.jsonl
+  civil_comments:
+    data: data/processed/civil_comments.jsonl
+    reference: data/predictions/P3_civil_comments_e4b_z_r8_seed0.jsonl
+  goemotions:
+    data: data/processed/goemotions.jsonl
+    reference: data/predictions/P3_goemotions_e4b_r8_seed0.jsonl
+  ledgar:
+    data: data/processed/ledgar.jsonl
+    reference: data/predictions/P3_ledgar_e4b_r8_seed0.jsonl

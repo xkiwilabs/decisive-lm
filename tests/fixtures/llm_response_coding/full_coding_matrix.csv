@@ -1,0 +1,5 @@
+SubjectID,TrialNumber,human001,human002,human003,human004,gpt-5,typesafe_jev
+2001,0,product-question,product-question,product-question,account-change,CANARY-llm-label-31f0,CANARY-jev-label-0c9d
+2001,1,refund,refund,refund,refund,CANARY-llm-label-31f0,CANARY-jev-label-0c9d
+2002,0,multiple,multiple,cancel,,CANARY-llm-label-31f0,CANARY-jev-label-0c9d
+2003,0,upgrade,upgrade,upgrade,upgrade,CANARY-llm-label-31f0,CANARY-jev-label-0c9d

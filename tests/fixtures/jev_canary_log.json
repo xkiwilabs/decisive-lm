@@ -1,0 +1,10 @@
+{"request": {"model": "jev-latest",
+             "state": {"participant_response": "how do I turn on the night mode"},
+             "questions": {"intent": {"type": "choice", "instructions": "Which category?",
+                                      "criteria": {"Refund": "Wants their money back", "Product-Question": "Asks how a product works"}}}},
+ "response": {"model": "CANARY-jev-model-91c4e2",
+              "answers": {"intent": {"type": "choice", "choice": "CANARY-jev-choice-5b7d10",
+                                     "confidence": 0.8123456789,
+                                     "probabilities": {"Refund": 0.0987654321, "Product-Question": 0.9012345679}}},
+              "usage": {"input_tokens": 1619, "note": "CANARY-jev-usage-e03f88"}},
+ "latency_s": 0.6612}

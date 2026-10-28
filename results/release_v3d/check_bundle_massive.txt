@@ -1,0 +1,3 @@
+
+29739 rows, 29739 questions: answer agrees on 29523; max |Δp| = 2.16e-01; last latency 67.8 ms for 712 tokens, 60 blocks
+conformance: 100%

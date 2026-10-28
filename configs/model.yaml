@@ -1,0 +1,49 @@
+# Backbone profiles (docs/guide/06 §6.9), filled in from config.json at M0 (results/M0.md).
+# Developer and base-model origin are recorded for the model-origin rule (docs/guide/16 §16.2).
+
+query_token_ids: {choice: 6, score: 7, noul: 8}   # <unused0..2>; never emitted by the tokenizer
+
+backbones:
+  e4b:
+    model_id: google/gemma-4-E4B-it
+    revision: ee0ef6023621cff504d758262d4e04895a5af4a2
+    licence: Apache-2.0
+    developer: Google DeepMind
+    base_model_origin: Google DeepMind
+    hidden_size: 2560
+    num_layers: 42
+    layer_pattern: "5 sliding : 1 full, last full"
+    sliding_window: 512
+    kv_shared_layers: 18
+    per_layer_embeddings: true
+    bidirectional_image_attention: false
+    modalities: [text, image, audio]
+    image_max_soft_tokens: 280
+    # Decoder q,k,v,o,gate,up,down only (docs/guide/06 §6.6). Anchored on language_model so the vision
+    # encoder's identically named projections (vision_tower.encoder.layers.N.self_attn.q_proj) are skipped.
+    lora_target_regex: '^(language_model\.)?layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)$'
+    confirmed_at_m0: true
+
+  26b-a4b:
+    model_id: google/gemma-4-26B-A4B-it
+    revision: 4d7ae4984b7db7de8f8457170b3f1a419ee76d52
+    licence: Apache-2.0
+    developer: Google DeepMind
+    base_model_origin: Google DeepMind
+    hidden_size: 2816
+    num_layers: 30
+    layer_pattern: "5 sliding : 1 full, last full"
+    sliding_window: 1024
+    kv_shared_layers: 0
+    per_layer_embeddings: false
+    bidirectional_image_attention: sliding_layers_only
+    moe: {num_experts: 128, top_k: 8}
+    modalities: [text, image]
+    image_max_soft_tokens: 280
+    # Every layer runs a dense MLP (gate/up/down nn.Linear) beside the experts. The experts are fused 3-D
+    # parameters (experts.gate_up_proj, experts.down_proj), not Linear modules, so this regex adapts attention
+    # and the dense MLP and leaves the experts and the router frozen. Global layers have K = V (no v_proj).
+    lora_target_regex: '^(language_model\.)?layers\.\d+\.(self_attn\.[qkvo]_proj|mlp\.(gate|up|down)_proj)$'
+    # Masks pass with expert selection forced to the packed run's (≤ 3e-5); free top-8 routing flips add ~1e-2 fp32 /
+    # ~0.24 bf16 hidden-state noise between packings, so independence holds up to that noise (results/M0.md).
+    confirmed_at_m0: true

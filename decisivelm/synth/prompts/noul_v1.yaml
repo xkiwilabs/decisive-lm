@@ -1,0 +1,27 @@
+# Noul prompts for labeller method (a) (SPEC §4.3a): P(Yes) / (P(Yes) + P(No)), averaged over the phrasings.
+# {criteria} is empty or a line saying what Yes and No mean. The state comes last in every phrasing so the rest is
+# shared across items and cached. Thinking off; the next token after `prefill` is the label.
+system: |-
+  You answer one yes/no question about a state. Reply with Yes or No only.
+phrasings:
+  - |-
+    Statement:
+    {instructions}{criteria}
+
+    Is the statement true of the state below? Answer Yes or No.
+
+    State:
+    {state}
+  - |-
+    Is the following true of the state below? Answer Yes if it is and No if it is not.
+    {instructions}{criteria}
+
+    State:
+    {state}
+  - |-
+    Read the state, then decide: does this hold for it?
+    {instructions}{criteria}
+
+    State:
+    {state}
+prefill: "Answer:"

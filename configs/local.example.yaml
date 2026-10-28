@@ -1,0 +1,9 @@
+# Machine-local settings: copy to configs/local.yaml (gitignored). Read by decisivelm.model.hub_kwargs for
+# every model, tokenizer and dataset download.
+#
+# hf_cache: where decisive-lm reads and writes Hugging Face files. Set it on a machine whose default cache
+#           belongs to a serving stack (e.g. vLLM), so nothing here writes into that cache.
+# offline:  load models and tokenizers from hf_cache only; a missing pinned revision fails instead of
+#           downloading. Dataset fetches (scripts/fetch_dataset.py) still go online.
+hf_cache: ~/models/decisive-lm/hub   # any directory of your own
+offline: true

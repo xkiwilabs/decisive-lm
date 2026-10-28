@@ -1,0 +1,105 @@
+# Enforced holdouts (docs/guide/08 §8.6). decisivelm/data/mix.py refuses a
+# training mix that contains any row matched here.
+#
+# Each entry: `dataset` (source_dataset), `adapters` (which training mixes it is
+# barred from: general, user), and optional selectors that narrow it to part of
+# the dataset: `source_ids`, `family_ids`, `languages`. With no selector the
+# whole dataset is held out.
+#
+# Other partial holdouts (CUAD's held-out contracts, VisA object
+# categories, the eval portions of Civil Comments and GoEmotions, unseen-schema
+# families) are added with their converters, when the ids and categories are
+# fixed (M3 / M4b).
+version: 1
+holdouts:
+  - dataset: llm_response_coding
+    adapters: [general]
+    reason: >-
+      Zero-shot test of the general adapter on a rule-heavy codebook (the authors' coding study).
+      Used for training only on the user fine-tune path (M6a / M6b).
+
+  # Whole datasets
+  - dataset: helpsteer3
+    adapters: [general, user]
+    reason: Frozen suite (docs/RELEASE.md); transfer of LLM-judging from HelpSteer2
+  - dataset: esc10
+    adapters: [general, user]
+    reason: Audio transfer
+  - dataset: chaosnli
+    adapters: [general, user]
+    reason: Research-only calibration check (X tier)
+  - dataset: cifar10h
+    adapters: [general, user]
+    reason: Research-only calibration check (X tier)
+  - dataset: anli
+    adapters: [general, user]
+    reason: Research-only robustness check (X tier)
+  - dataset: sst5
+    adapters: [general, user]
+    reason: Research-only calibration check (X tier)
+
+  - dataset: sib200
+    adapters: [general]
+    reason: >-
+      A development check of calibration on text that is not English (docs/RELEASE.md, change log 2026-10-24), and
+      share-alike, so never trained on for the general adapter. Its rows are all gold; the suite's 10 held-out languages are left out.
+  - dataset: wiki_toxicity
+    adapters: [general]
+    reason: >-
+      A development check of review readiness on a social-judgement Score rated by many people (docs/RELEASE.md,
+      change log 2026-10-25), standing in for that kind of suite task without being it. Its rows are all gold.
+  - dataset: multinli
+    adapters: [general]
+    reason: >-
+      New-task calibration (docs/RELEASE.md; guide chapter 10.6): the general head's Choice and Score temperatures are
+      scaled on MultiNLI's gold_calib, which only shows how the head behaves on a task it has not seen while no part of
+      MultiNLI is trained on. User fine-tunes may train on it.
+
+  # Partial holdouts
+  - dataset: massive
+    adapters: [general, user]
+    # MASSIVE locale codes; the converter must store the locale in `language`. One per family where possible, six
+    # scripts (Georgian, Ge'ez, Tamil and Hangul appear nowhere in training), high to low web resource, about half
+    # with a close relative left in training (pl: ru, sl; ur: hi; fi: hu; am: ar, he; ta: te, kn, ml; vi: km;
+    # tl: id, ms, jv) and half without (ka, sw, ko).
+    languages: [pl-PL, ur-PK, fi-FI, ka-GE, am-ET, sw-KE, ta-IN, ko-KR, vi-VN, tl-PH]
+    reason: >-
+      Zero-shot language transfer. MASSIVE is parallel (one utterance id across all locales, same split), so only
+      the test split of these locales is scored and no test-split id is trained on in any locale. Translation
+      never writes into these languages.
+  - dataset: measuring_hate_speech
+    adapters: [general, user]
+    family_ids: [measuring_hate_speech-eval]
+    reason: >-
+      Frozen suite (docs/RELEASE.md): 20% of the comments with >= 3 raters, by comment id
+      (decisivelm/data/converters/measuring_hate_speech.py); the other comments may train.
+  - dataset: cuad
+    adapters: [general, user]
+    family_ids: [cuad-heldout-types]
+    reason: >-
+      Frozen suite: the 10 held-out clause types (decisivelm/data/converters/cuad.py HELD_OUT), on every contract.
+
+  # Public Jev benchmarks (decisivelm/data/converters/jev_public.py): zero-shot comparisons with Jev's published
+  # numbers. Every row is gold_test, so the split rules already keep them out of training; listing them here also
+  # bars any other split of these sources from the general adapter.
+  - dataset: bench_banking77
+    adapters: [general]
+    reason: Jev comparison (dhruvmehra/jevbench); banking77's own train split may still train the general adapter
+  - dataset: bench_agnews
+    adapters: [general]
+    reason: Zero-shot Jev comparison (dhruvmehra/jevbench)
+  - dataset: bench_sst2
+    adapters: [general]
+    reason: Zero-shot Jev comparison (dhruvmehra/jevbench)
+  - dataset: bench_emotion
+    adapters: [general]
+    reason: Zero-shot Jev comparison (elcronos/jev-vs-open-decision-models)
+  - dataset: bench_tweet_topic
+    adapters: [general]
+    reason: Zero-shot Jev comparison (elcronos/jev-vs-open-decision-models)
+  - dataset: bench_fin_topic
+    adapters: [general]
+    reason: Zero-shot Jev comparison (elcronos/jev-vs-open-decision-models)
+  - dataset: bench_daily_dialog
+    adapters: [general]
+    reason: Zero-shot Jev comparison (elcronos/jev-vs-open-decision-models)

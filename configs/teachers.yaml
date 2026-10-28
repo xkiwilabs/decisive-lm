@@ -1,0 +1,51 @@
+# Teachers for synth labelling (docs/guide/12). Each records what the labeller needs and what every teacher target
+# stores: model, revision, server version, logprobs settings, licence and origin (model-origin rule, docs/guide/16 §16.2).
+#
+# schedule: the server is shared with other users. Between day_hours[0] and day_hours[1] (local time) at most
+# day_max_in_flight requests are open, and none while other users' requests are queued on the server
+# (vllm:num_requests_waiting > 0). Outside those hours, up to night_max_in_flight.
+
+teachers:
+  gemma4_26b_a4b:
+    base_url: http://127.0.0.1:8002/v1
+    model: google/gemma-4-26B-A4B-it
+    revision: 4d7ae4984b7db7de8f8457170b3f1a419ee76d52   # the server's refs/main; same as the 26b-a4b backbone pin
+    tokenizer_backbone: 26b-a4b                          # configs/model.yaml profile whose tokenizer renders prompts
+    licence: Apache-2.0
+    developer: Google DeepMind
+    base_model_origin: Google DeepMind
+    modalities: [text, image]
+    vllm_version: 0.19.2rc1.dev107+g4eafc7292
+    max_logprobs: 20                 # vLLM default; Choice questions with more options need per-option scoring
+    logprobs_mode: raw_logprobs      # vLLM default: before temperature and penalties
+    prefix_caching: true
+    kv_cache_dtype: fp8
+    api_key_env: null
+    schedule:
+      day_hours: [6, 23]
+      day_max_in_flight: 4
+      night_max_in_flight: 64
+      yield_when_others_waiting: true
+
+  # The student's own backbone, prompted (P0, docs/guide/09 §9.3). Same weights and revision as the e4b profile, served by a
+  # second vLLM server. A baseline, and from General v3 a second, minority teacher blended into the 26B's targets
+  # (scripts/teacher_targets.py --blend), never the only one: the spec prefers a larger teacher.
+  gemma4_e4b:
+    base_url: http://127.0.0.1:8001/v1
+    model: google/gemma-4-E4B-it
+    revision: ee0ef6023621cff504d758262d4e04895a5af4a2   # the server's refs/main; same as the e4b backbone pin
+    tokenizer_backbone: e4b
+    licence: Apache-2.0
+    developer: Google DeepMind
+    base_model_origin: Google DeepMind
+    modalities: [text, image, audio]
+    vllm_version: 0.19.2rc1.dev107+g4eafc7292
+    max_logprobs: 20
+    logprobs_mode: raw_logprobs
+    prefix_caching: true
+    api_key_env: null
+    schedule:
+      day_hours: [6, 23]
+      day_max_in_flight: 4
+      night_max_in_flight: 64
+      yield_when_others_waiting: true

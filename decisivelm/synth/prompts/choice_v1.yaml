@@ -1,0 +1,15 @@
+# Choice prompt for labeller method (a) and P0 (SPEC §4.3a, §5.1). Thinking off;
+# the assistant turn is pre-filled with `prefill`, so the next token is the label.
+# The state comes last so everything before it is shared across items and cached.
+system: |-
+  You answer one multiple-choice question about a state. Read the question and the options, then the state, and choose the single option that best fits. Reply with the option's letter only.
+user: |-
+  Question:
+  {instructions}
+
+  Options:
+  {options}
+
+  State:
+  {state}
+prefill: "Answer:"

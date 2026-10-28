@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+
+# Data never goes in git: datasets, teacher labels, mixes, predictions, logs, queues. Public data is
+# published on Hugging Face at a release, or fetched from its pinned source (docs/RELEASE.md, "Data").
+/data/
+
+# Trained weights
+bundles/
+
+# Machine-local settings (configs/local.example.yaml) and private dataset sources
+configs/local.yaml
+configs/datasets.local.yaml

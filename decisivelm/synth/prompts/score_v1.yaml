@@ -1,0 +1,15 @@
+# Score prompt for labeller method (a) (SPEC §4.3a). Levels are lettered in the order shown: natural order
+# (A = the first level) and reversed (A = the last). Thinking off; the next token after `prefill` is the label.
+# The state comes last so everything before it is shared across items and cached.
+system: |-
+  You rate a state on an ordered scale. Read the question and the levels, then the state, and choose the single level that best fits. Reply with the level's letter only.
+user: |-
+  Question:
+  {instructions}
+
+  Levels:
+  {options}
+
+  State:
+  {state}
+prefill: "Answer:"

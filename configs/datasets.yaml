@@ -1,0 +1,376 @@
+# Expected licence and tier per source (docs/guide/14 §14.1).
+# `license` is an SPDX id (LicenseRef-* for anything without one). The tier is
+# derived from it: R permissive, S share-alike, X everything else. A source may
+# be put in a more restrictive tier with an `override` reason, never a less
+# restrictive one. decisivelm/data/dataset.py refuses rows that disagree.
+version: 1
+datasets:
+  llm_response_coding:
+    description: Free-text "what is this person's intent?" responses to action videos, coded by four humans (the authors' coding study)
+    source: The authors' study data (not distributed), imported by column whitelist
+    license: LicenseRef-pending
+    tier: X
+    override: >-
+      Ethics-approved, non-identifiable and cleared for public release, but no licence has been chosen yet.
+      X tier (private experiments and eval only) until it is; CC-BY-4.0 or CC0-1.0 would make it R.
+
+  # Seed datasets (docs/guide/14 §14.2). `fetch` pins every file to a commit or Hub revision;
+  # scripts/fetch_dataset.py downloads them into data/raw/<name>/ and records sha256s.
+  banking77:
+    description: 13,083 online-banking customer queries labelled with 77 fine-grained intents
+    source: https://github.com/PolyAI-LDN/task-specific-datasets (Casanueva et al. 2020)
+    license: CC-BY-4.0
+    tier: R
+    fetch:
+      - url: https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/57ec275d8078af65b7731c2a98be812d844a6d6b/banking_data/train.csv
+        file: train.csv
+      - url: https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/57ec275d8078af65b7731c2a98be812d844a6d6b/banking_data/test.csv
+        file: test.csv
+
+  clinc150:
+    description: CLINC150 "plus" — 150 virtual-assistant intents across 10 domains plus out-of-scope queries
+    source: https://huggingface.co/datasets/clinc/clinc_oos (Larson et al. 2019)
+    license: CC-BY-3.0
+    tier: R
+    fetch:
+      - {hf: clinc/clinc_oos, revision: 155b9c710419136e17307b80d0a13e68cd46b4ec, path: plus/train-00000-of-00001.parquet, file: train.parquet}
+      - {hf: clinc/clinc_oos, revision: 155b9c710419136e17307b80d0a13e68cd46b4ec, path: plus/validation-00000-of-00001.parquet, file: validation.parquet}
+      - {hf: clinc/clinc_oos, revision: 155b9c710419136e17307b80d0a13e68cd46b4ec, path: plus/test-00000-of-00001.parquet, file: test.parquet}
+      - {hf: clinc/clinc_oos, revision: 155b9c710419136e17307b80d0a13e68cd46b4ec, path: README.md, file: README.md}
+
+  # Generated (docs/guide/13 §13.4): questions and states written by the teacher on a vLLM server (scripts/synth_generate.py).
+  # Gemma 4 is Apache-2.0 and places no terms on its outputs. Fan-out rows on real states keep their parent's source,
+  # licence and tier instead.
+  synth_gemma4:
+    description: Question sets and states written by Gemma 4 26B A4B to seeded specs (domains, types, option counts, styles)
+    source: Generated locally by scripts/synth_generate.py (prompts in decisivelm/synth/prompts/generate_v1.yaml)
+    license: Apache-2.0
+    tier: R
+
+  helpsteer2:
+    description: NVIDIA HelpSteer2 — prompt/response pairs rated 0–4 on helpfulness, correctness, coherence, complexity and verbosity
+    source: https://huggingface.co/datasets/nvidia/HelpSteer2 (Wang et al. 2024)
+    license: CC-BY-4.0
+    tier: R
+    fetch:
+      - {hf: nvidia/HelpSteer2, revision: 990b2711a36180dd19d9c94b8627844866f8982a, path: train.jsonl.gz, file: train.jsonl.gz}
+      - {hf: nvidia/HelpSteer2, revision: 990b2711a36180dd19d9c94b8627844866f8982a, path: validation.jsonl.gz, file: validation.jsonl.gz}
+      - {hf: nvidia/HelpSteer2, revision: 990b2711a36180dd19d9c94b8627844866f8982a, path: disagreements/disagreements.jsonl.gz, file: disagreements.jsonl.gz}
+      - {hf: nvidia/HelpSteer2, revision: 990b2711a36180dd19d9c94b8627844866f8982a, path: README.md, file: README.md}
+
+  helpsteer2_preference:
+    description: HelpSteer2-Preference — two responses to one prompt, which is better and by how much (−3 to +3), rated by 3–5 annotators each
+    source: https://huggingface.co/datasets/nvidia/HelpSteer2 (Wang et al. 2025, HelpSteer2-Preference)
+    license: CC-BY-4.0
+    tier: R
+    note: >-
+      The same task as the suite's HelpSteer3, deferred until the first release (docs/RELEASE.md, suite-task rule);
+      from 0.2, HelpSteer3 is reported as a seen task. Its prompts and responses are HelpSteer2's, so rows take
+      HelpSteer2's split and family by prompt.
+    fetch:
+      - {hf: nvidia/HelpSteer2, revision: 990b2711a36180dd19d9c94b8627844866f8982a, path: preference/preference.jsonl.gz, file: preference.jsonl.gz}
+
+  koniq10k:
+    description: KonIQ-10k — 10,073 photos, each rated for technical quality on a 5-point scale (bad … excellent) by about 120 crowd workers
+    source: https://database.mmsp-kn.de/koniq-10k-database.html (Hosu, Lin, Sziranyi & Saupe 2020)
+    license: NOASSERTION
+    tier: X
+    override: >-
+      No licence is stated; the page says the database is "freely available to the research community", and the photos
+      are Flickr images under their own licences. Image fine-tune examples only, never a released head.
+    note: >-
+      Images from the authors' OSF mirror (osf.io/hcsdy), which lists each file's sha256 (the project site was not
+      responding); the rating counts from the authors' code repository (subpic/koniq, MIT), pinned to a commit.
+      The 1024x768 images (the size raters saw) come as a split zip, joined with `zip -s 0` by the converter.
+    fetch:
+      - url: https://raw.githubusercontent.com/subpic/koniq/1c271570ac83aeb6aa8e7ff25449f3299b0d2e53/metadata/koniq10k_distributions_sets.csv
+        file: koniq10k_distributions_sets.csv   # per-image counts of each rating and the authors' split (repo: MIT)
+      - url: https://osf.io/download/cmuak/
+        file: 1024x768.zip
+        sha256: ca3104f07fc451e47bf36908e2a286363c0b625e54f005b2f943a9af36f91402
+      - url: https://osf.io/download/byser/
+        file: 1024x768.z01
+        sha256: 98a40ecd6ad8c35ee206ded7aa03c4db6232ceaef888e6d4bab2f2650e3a876d
+
+  crema_d:
+    description: CREMA-D — 7,442 clips of 91 actors saying 12 sentences in six emotions; each clip's emotion and intensity judged by about 10 listeners from the voice alone
+    source: https://github.com/CheyneyComputerScience/CREMA-D (Cao et al. 2014)
+    license: ODbL-1.0
+    tier: S
+    note: >-
+      Open Database License, contents under the Database Contents License. Acted emotion, as listeners perceive it:
+      used for audio fine-tune examples. The actors' demographics file is never read.
+    fetch:
+      - {url: "https://raw.githubusercontent.com/CheyneyComputerScience/CREMA-D/1658cd342dff90010aa843eaeebd53610a08b1dc/finishedResponses.csv", file: finishedResponses.csv}
+      - {url: "https://raw.githubusercontent.com/CheyneyComputerScience/CREMA-D/1658cd342dff90010aa843eaeebd53610a08b1dc/processedResults/tabulatedVotes.csv", file: tabulatedVotes.csv}
+      - {github: CheyneyComputerScience/CREMA-D, revision: 1658cd342dff90010aa843eaeebd53610a08b1dc, allow: "AudioWAV/*.wav"}
+
+  things_living:
+    description: THINGSplus — one public-domain photo for each of 1,854 object concepts, and about 37 online raters per concept judging "something that lives" on a 7-point agreement scale
+    source: https://osf.io/jum2f/ (Hebart et al. 2019; Stoinski, Perkuhn & Hebart 2024)
+    license: CC-BY-4.0
+    tier: R
+    note: >-
+      Ratings and metadata CC BY 4.0 (credit the two papers); the THINGSplus photos CC0. Only the CC0 photos are used,
+      never the password-protected THINGS image set (research use only, no redistribution or modification). Raters
+      saw the object's name and a photo of it. The raters' age and gender columns are never read. The OSF download
+      links are not pinned to a version, so each file's content is pinned.
+    fetch:
+      - {url: "https://osf.io/download/wb36u/", file: images_THINGSplus-CC0.zip, sha256: ed86912f6848ac5cf8b405a727f875295cc081cdd64271e80ae4d607b7d447e3}
+      - {url: "https://osf.io/download/7y38s/", file: object-properties_trial-wise_thingsplus.tsv, sha256: a5172712c564ef060c20d18eace69e99d7aa3d798e81b7b628f63e1da7a4f05f}
+      - {url: "https://osf.io/download/52wrx/", file: LICENSE, sha256: de570769b5545d7b9a7f9165b9da691370fa680330a8b2bf73cd9368ba1dbc97}
+
+  civil_comments:
+    description: Civil Comments (Jigsaw) — public comments with the share of raters marking each toxicity attribute
+    source: https://huggingface.co/datasets/google/civil_comments (Borkan et al. 2019)
+    license: CC0-1.0
+    tier: R
+    fetch:
+      - {hf: google/civil_comments, revision: f2970eb3a55777454c94069077cc8d9b5866312d, path: data/train-00000-of-00002.parquet, file: train-0.parquet}
+      - {hf: google/civil_comments, revision: f2970eb3a55777454c94069077cc8d9b5866312d, path: data/train-00001-of-00002.parquet, file: train-1.parquet}
+      - {hf: google/civil_comments, revision: f2970eb3a55777454c94069077cc8d9b5866312d, path: data/validation-00000-of-00001.parquet, file: validation.parquet}
+      - {hf: google/civil_comments, revision: f2970eb3a55777454c94069077cc8d9b5866312d, path: data/test-00000-of-00001.parquet, file: test.parquet}
+
+  goemotions:
+    description: GoEmotions — 58k Reddit comments, each rated by 3–5 raters for 27 emotions plus neutral
+    source: https://huggingface.co/datasets/google-research-datasets/go_emotions (Demszky et al. 2020)
+    license: Apache-2.0
+    tier: R
+    fetch:
+      - {hf: google-research-datasets/go_emotions, revision: add492243ff905527e67aeb8b80c082af02207c3, path: raw/train-00000-of-00001.parquet, file: raw.parquet}
+      - {hf: google-research-datasets/go_emotions, revision: add492243ff905527e67aeb8b80c082af02207c3, path: simplified/train-00000-of-00001.parquet, file: simplified_train.parquet}
+      - {hf: google-research-datasets/go_emotions, revision: add492243ff905527e67aeb8b80c082af02207c3, path: simplified/validation-00000-of-00001.parquet, file: simplified_validation.parquet}
+      - {hf: google-research-datasets/go_emotions, revision: add492243ff905527e67aeb8b80c082af02207c3, path: simplified/test-00000-of-00001.parquet, file: simplified_test.parquet}
+      - {hf: google-research-datasets/go_emotions, revision: add492243ff905527e67aeb8b80c082af02207c3, path: README.md, file: README.md}
+
+  ledgar:
+    description: LEDGAR (LexGLUE) — 80k contract provisions from SEC filings, each labelled with one of 100 provision types
+    source: https://huggingface.co/datasets/coastalcph/lex_glue (Tuggener et al. 2020; Chalkidis et al. 2022)
+    license: CC-BY-4.0
+    tier: R
+    note: Licence as distributed in LexGLUE (dataset card metadata); the provisions are public SEC EDGAR filings.
+    fetch:
+      - {hf: coastalcph/lex_glue, revision: c23fdff1a6bf74e0e1a71cb86f1e781d37da888c, path: ledgar/train-00000-of-00001.parquet, file: train.parquet}
+      - {hf: coastalcph/lex_glue, revision: c23fdff1a6bf74e0e1a71cb86f1e781d37da888c, path: ledgar/validation-00000-of-00001.parquet, file: validation.parquet}
+      - {hf: coastalcph/lex_glue, revision: c23fdff1a6bf74e0e1a71cb86f1e781d37da888c, path: ledgar/test-00000-of-00001.parquet, file: test.parquet}
+      - {hf: coastalcph/lex_glue, revision: c23fdff1a6bf74e0e1a71cb86f1e781d37da888c, path: README.md, file: README.md}
+
+  multinli:
+    description: MultiNLI 1.0 without the fiction genre — premise/hypothesis pairs labelled entailment, neutral or contradiction; dev pairs by 5 annotators
+    source: https://cims.nyu.edu/~sbowman/multinli/ (Williams et al. 2018)
+    license: LicenseRef-OANC
+    tier: R
+    note: >-
+      The non-fiction genres come from the Open American National Corpus, free of restrictions on use and
+      redistribution; the fiction genre mixes CC BY-SA 3.0 and other works, so the converter drops it. Served from a
+      university page rather than a commit, so the archive is pinned by sha256.
+    fetch:
+      - url: https://cims.nyu.edu/~sbowman/multinli/multinli_1.0.zip
+        file: multinli_1.0.zip
+        sha256: 049f507b9e36b1fcb756cfd5aeb3b7a0cfcb84bf023793652987f7e7e0957822
+
+  sib200:
+    description: SIB-200 — 1,004 Flores-200 news sentences labelled with one of 7 topics, the same sentences in 205 languages
+    source: https://huggingface.co/datasets/Davlan/sib200 (Adelani et al. 2024)
+    license: CC-BY-SA-4.0
+    tier: S
+    note: >-
+      A development check of calibration on text that is not English, on languages outside the suite's held-out ten
+      (docs/RELEASE.md, change log 2026-10-24: no non-English scale is fitted). Share-alike, so it is never trained on
+      for the general adapter.
+    fetch:
+      - {hf: Davlan/sib200, revision: 38977a667f6fc264d5c26ec57a01e16db040b358, allow: "data/*/*", file: data}
+      - {hf: Davlan/sib200, revision: 38977a667f6fc264d5c26ec57a01e16db040b358, path: README.md, file: README.md}
+
+  politeness:
+    description: Stanford Politeness Corpus, Stack Exchange part — 6,603 requests, each rated by 5 crowd workers on a 1–25 slider from very impolite to very polite
+    source: https://convokit.cornell.edu/documentation/stack_politeness.html (Danescu-Niculescu-Mizil et al. 2013; ConvoKit release)
+    license: CC-BY-SA-3.0
+    tier: S
+    note: >-
+      Human-rated training data for a two-sided Score with a common neutral middle (docs/RELEASE.md, change log
+      2026-10-25). Tier S: the requests are Stack Exchange posts, which are CC BY-SA 3.0; ConvoKit's CC BY 4.0
+      covers its release, not the posts' text. ConvoKit serves the corpus from a university server, so the archive is pinned by sha256; the
+      per-rater ratings are a pickle of numpy integers, read by an unpickler that refuses anything else. The
+      Wikipedia part is not used.
+    fetch:
+      - url: https://zissou.infosci.cornell.edu/convokit/datasets/stack-exchange-politeness-corpus/stack-exchange-politeness-corpus.zip
+        file: stack-exchange-politeness-corpus.zip
+        sha256: d5be7586c3f4224cffdb45cf87af17b5ad17c0ed4d2d5f6560bcb201703681a3
+
+  humicroedit:
+    description: Humicroedit (SemEval-2020 Task 7, subtask 1) — about 15,000 news headlines with one word edited to be funny, plus FunLines' 8,000, each graded 0–3 by about 5 crowd workers
+    source: https://zenodo.org/records/3969509 (Hossain et al. 2020)
+    license: CC-BY-4.0
+    tier: R
+    note: >-
+      Human ratings with several raters per item from a judgement unrelated to the suite's tasks (docs/RELEASE.md,
+      change log 2026-10-26). The licence is stated on the Zenodo record (the Hugging Face copy says "unknown").
+      Zenodo's md5 is 9953e94c4dc7e50d68b010d68a143f9c.
+    fetch:
+      - url: https://zenodo.org/records/3969509/files/semeval-2020-task-7-dataset.zip?download=1
+        file: semeval-2020-task-7-dataset.zip
+        sha256: 12a6cbf28c8b698ad80be42a65ac867b57e4c71662eedab607805e167ba791ab
+
+  csc_sarcasm:
+    description: Conversational Sarcasm Corpus — 7,036 replies to everyday scenarios, each rated 1–6 for sarcasm by 4 or 6 other people
+    source: https://github.com/hyewon-jang-kn/conversational-sarcasm-corpus (Jang & Frassinelli 2024)
+    license: MIT
+    tier: R
+    note: >-
+      Human ratings with several raters per item from a judgement unrelated to the suite's tasks (docs/RELEASE.md,
+      change log 2026-10-26). The repository's LICENSE is MIT; the corpus is also in LeWiDi 2025.
+    fetch:
+      - url: https://raw.githubusercontent.com/hyewon-jang-kn/conversational-sarcasm-corpus/bd0a2894c381fffdb5bf0ec8d5cfaa812cac94d8/data_full.csv
+        file: data_full.csv
+        sha256: fd8ca7531887823a315e91f5d0edbcc9ec685a557c333c37f485a15a9e55ad7a
+
+  args_me:
+    description: args.me corpus 1.0 (cleaned) — 382,545 arguments from four debate portals (Debatewise, IDebate.org, Debatepedia, Debate.org), each with its debate's title and a stance
+    source: https://zenodo.org/records/4139439 (Ajjour et al. 2019)
+    license: CC-BY-4.0
+    tier: R
+    note: >-
+      Texts for the rating app's two-sided Scores (docs/RELEASE.md, change log 2026-10-27); no labels of its own are
+      used. Zenodo says "individual rights to the content still apply". The archive is one 888 MB JSON object once
+      unzipped; it is read from the zip. Zenodo's md5 is fb0837103a4860e1d4536174f55b12c3.
+    fetch:
+      - url: https://zenodo.org/records/4139439/files/argsme-1.0-cleaned.zip?download=1
+        file: argsme-1.0-cleaned.zip
+        sha256: da8f680603d072489372e95cadd0308d576850a70fb36707893e3c6af7fe3033
+
+  wiki_toxicity:
+    description: Wikipedia Talk Labels, Toxicity — 159,686 English Wikipedia talk-page comments, each rated by about 10 crowd workers from very toxic to very healthy (5 levels)
+    source: https://figshare.com/articles/Wikipedia_Talk_Labels_Toxicity/4563973 (Wulczyn et al. 2017, Wikimedia and Jigsaw)
+    license: CC0-1.0
+    tier: R
+    note: >-
+      A development check of review readiness on a social-judgement Score rated by many people (docs/RELEASE.md,
+      change log 2026-10-25): never trained on for the general adapter (configs/holdout.yaml). Served by figshare,
+      so each file is pinned by sha256 (figshare's md5s match).
+    fetch:
+      - url: https://ndownloader.figshare.com/files/7394539
+        file: toxicity_annotations.tsv
+        sha256: ebef1ada7564f465cdb53bfbbe4789c2c185a662404860972ba3a9db097e3397
+      - url: https://ndownloader.figshare.com/files/7394542
+        file: toxicity_annotated_comments.tsv
+        sha256: a4327cef5932459852599f281a4f3908f50d98117608f0c1473aa989e2bcf362
+
+  maud:
+    description: MAUD v1 — deal-point questions on 152 public merger agreements, answered by law students and checked by experienced M&A lawyers (Wang et al. 2023)
+    source: https://huggingface.co/datasets/theatticusproject/maud (The Atticus Project)
+    license: CC-BY-4.0
+    tier: R
+    fetch:
+      - {hf: theatticusproject/maud, revision: 37d5c3b95d18dcd8404cc5ce3fd5069be062392f, path: MAUD_v1/MAUD_train.csv, file: train.csv}
+      - {hf: theatticusproject/maud, revision: 37d5c3b95d18dcd8404cc5ce3fd5069be062392f, path: MAUD_v1/MAUD_dev.csv, file: dev.csv}
+      - {hf: theatticusproject/maud, revision: 37d5c3b95d18dcd8404cc5ce3fd5069be062392f, path: MAUD_v1/MAUD_test.csv, file: test.csv}
+
+  # Public Jev benchmarks (docs/guide/14, "Development benchmarks"): the exact items and question wording independent benchmarks sent to
+  # Jev, re-run through our open models and compared with their published aggregate numbers. Test only: every row is
+  # gold_test, and configs/holdout.yaml bars them from the general adapter so the comparison stays zero-shot. Data
+  # comes from the original Hub datasets, never from the benchmark repos (several also hold Jev's raw answers).
+  bench_banking77:
+    description: Banking77 test split, the 500-item seed-0 sample and intent descriptions of dhruvmehra/jevbench
+    source: https://huggingface.co/datasets/legacy-datasets/banking77 (Casanueva et al. 2020); harness github.com/dhruvmehra/jevbench (MIT)
+    license: CC-BY-4.0
+    tier: R
+    fetch:
+      - {hf: legacy-datasets/banking77, revision: f54121560de48f2852f90be299010d1d6dc612ec, path: data/test-00000-of-00001.parquet, file: test.parquet}
+      - {hf: legacy-datasets/banking77, revision: f54121560de48f2852f90be299010d1d6dc612ec, path: README.md, file: README.md}
+  bench_agnews:
+    description: AG News test split, the 500-item seed-0 sample and topic descriptions of dhruvmehra/jevbench
+    source: https://huggingface.co/datasets/fancyzhx/ag_news (Zhang et al. 2015); harness github.com/dhruvmehra/jevbench (MIT)
+    license: LicenseRef-unknown
+    tier: X
+    override: No licence on the Hub card; the original AG corpus is offered for non-commercial research. Eval only.
+    fetch:
+      - {hf: fancyzhx/ag_news, revision: eb185aade064a813bc0b7f42de02595523103ca4, path: data/test-00000-of-00001.parquet, file: test.parquet}
+      - {hf: fancyzhx/ag_news, revision: eb185aade064a813bc0b7f42de02595523103ca4, path: README.md, file: README.md}
+  bench_sst2:
+    description: SST-2 validation split, the 500-item seed-0 sample and sentiment descriptions of dhruvmehra/jevbench
+    source: https://huggingface.co/datasets/stanfordnlp/sst2 (Socher et al. 2013); harness github.com/dhruvmehra/jevbench (MIT)
+    license: LicenseRef-unknown
+    tier: X
+    override: No licence stated on the Hub card. Eval only.
+    fetch:
+      - {hf: stanfordnlp/sst2, revision: 8d51e7e4887a4caaa95b3fbebbf53c0490b58bbb, path: data/validation-00000-of-00001.parquet, file: validation.parquet}
+      - {hf: stanfordnlp/sst2, revision: 8d51e7e4887a4caaa95b3fbebbf53c0490b58bbb, path: README.md, file: README.md}
+  bench_emotion:
+    description: dair-ai/emotion test split (2,000 tweets, 6 emotions), as evaluated by elcronos/jev-vs-open-decision-models
+    source: https://huggingface.co/datasets/dair-ai/emotion (Saravia et al. 2018); harness github.com/elcronos/jev-vs-open-decision-models
+    license: LicenseRef-other
+    tier: X
+    override: Hub card licence "other"; offered for educational and research use. Eval only.
+    fetch:
+      - {hf: dair-ai/emotion, revision: cab853a1dbdf4c42c2b3ef2173804746df8825fe, path: split/test-00000-of-00001.parquet, file: test.parquet}
+      - {hf: dair-ai/emotion, revision: cab853a1dbdf4c42c2b3ef2173804746df8825fe, path: README.md, file: README.md}
+  bench_tweet_topic:
+    description: cardiffnlp/tweet_topic_single test_2021 (1,693 tweets, 6 topics), as evaluated by elcronos/jev-vs-open-decision-models
+    source: https://huggingface.co/datasets/cardiffnlp/tweet_topic_single (Antypas et al. 2022); harness github.com/elcronos/jev-vs-open-decision-models
+    license: LicenseRef-other
+    tier: X
+    override: Hub card licence "other"; tweet text is under X's terms. Eval only.
+    fetch:
+      - {hf: cardiffnlp/tweet_topic_single, revision: 87b7a0d1c402dbb481db649569c556d9aa27ac05, path: dataset/split_temporal/test_2021.single.json, file: test_2021.single.json}
+      - {hf: cardiffnlp/tweet_topic_single, revision: 87b7a0d1c402dbb481db649569c556d9aa27ac05, path: README.md, file: README.md}
+  bench_fin_topic:
+    description: zeroshot/twitter-financial-news-topic validation split (4,117 tweets, 20 topics), as evaluated by elcronos/jev-vs-open-decision-models
+    source: https://huggingface.co/datasets/zeroshot/twitter-financial-news-topic; harness github.com/elcronos/jev-vs-open-decision-models
+    license: MIT
+    tier: X
+    override: MIT on the Hub card, but the text is tweets (X's terms, authors' copyright) and these items benchmark the general adapter zero-shot. Eval only.
+    fetch:
+      - {hf: zeroshot/twitter-financial-news-topic, revision: acbc8af2a35ccf0916124efcbe9e6cf25f191012, path: topic_valid.csv, file: topic_valid.csv}
+      - {hf: zeroshot/twitter-financial-news-topic, revision: acbc8af2a35ccf0916124efcbe9e6cf25f191012, path: README.md, file: README.md}
+  bench_daily_dialog:
+    description: DailyDialog test split flattened to 7,740 utterances (7 emotions), as evaluated by elcronos/jev-vs-open-decision-models
+    source: https://huggingface.co/datasets/OpenRL/daily_dialog (parquet mirror of Li et al. 2017); harness github.com/elcronos/jev-vs-open-decision-models
+    license: CC-BY-NC-SA-4.0
+    tier: X
+    fetch:
+      - {hf: OpenRL/daily_dialog, revision: 1668faf0c0dc44664f108c489fd0666128db2c48, path: data/test-00000-of-00001-66dc7d981b70c918.parquet, file: test.parquet}
+      - {hf: OpenRL/daily_dialog, revision: 1668faf0c0dc44664f108c489fd0666128db2c48, path: README.md, file: README.md}
+
+  # The frozen held-out suite (docs/RELEASE.md): release gates only, never trained, tuned or selected on. Every row is
+  # gold_test, and configs/holdout.yaml bars each from the general adapter. Human labels as published; no new rating.
+  helpsteer3:
+    description: HelpSteer3 preference subset — two responses per conversation (general, STEM, code, multilingual), each pair rated by 3–5 annotators for which is better and by how much
+    source: https://huggingface.co/datasets/nvidia/HelpSteer3 (Wang et al. 2025)
+    license: CC-BY-4.0
+    tier: R
+    fetch:
+      - {hf: nvidia/HelpSteer3, revision: f6d145777bcbde96137596340fab89793acd1031, path: preference/train.jsonl.gz, file: preference_train.jsonl.gz}
+      - {hf: nvidia/HelpSteer3, revision: f6d145777bcbde96137596340fab89793acd1031, path: preference/validation.jsonl.gz, file: preference_validation.jsonl.gz}
+      - {hf: nvidia/HelpSteer3, revision: f6d145777bcbde96137596340fab89793acd1031, path: README.md, file: README.md}
+
+  measuring_hate_speech:
+    description: Measuring Hate Speech — 39,565 social-media comments, 135,556 ratings by 7,912 annotators on ten ordinal hate-speech items
+    source: https://huggingface.co/datasets/ucberkeley-dlab/measuring-hate-speech (Kennedy et al. 2020)
+    license: CC-BY-4.0
+    tier: R
+    note: Annotator demographic columns are dropped by the converter (whitelist); only per-annotator item ratings are kept.
+    fetch:
+      - {hf: ucberkeley-dlab/measuring-hate-speech, revision: 5468f6e118396646b02a2f691e771f6b6d9502ea, path: data/train-00000-of-00001.parquet, file: train.parquet}
+      - {hf: ucberkeley-dlab/measuring-hate-speech, revision: 5468f6e118396646b02a2f691e771f6b6d9502ea, path: README.md, file: README.md}
+
+  cuad:
+    description: CUAD v1 — 510 commercial contracts from SEC EDGAR, expert-labelled for 41 clause types (13,000+ labels)
+    source: https://huggingface.co/datasets/theatticusproject/cuad (Hendrycks et al. 2021, The Atticus Project)
+    license: CC-BY-4.0
+    tier: R
+    fetch:
+      - {hf: theatticusproject/cuad, revision: a3c393f5d103fd0c516374e4fdff676c8176dcb1, path: CUAD_v1/CUAD_v1.json, file: CUAD_v1.json}
+      - {hf: theatticusproject/cuad, revision: a3c393f5d103fd0c516374e4fdff676c8176dcb1, path: CUAD_v1/master_clauses.csv, file: master_clauses.csv}
+      - {hf: theatticusproject/cuad, revision: a3c393f5d103fd0c516374e4fdff676c8176dcb1, path: README.md, file: README.md}
+
+  massive:
+    description: MASSIVE 1.1 — ~1M virtual-assistant utterances, 60 intents, in 52 locales (parallel; one id per utterance across locales)
+    source: https://github.com/alexa/massive (FitzGerald et al. 2022)
+    license: CC-BY-4.0
+    tier: R
+    note: Served from S3 rather than a commit, so the archive is pinned by sha256.
+    fetch:
+      - url: https://amazon-massive-nlu-dataset.s3.amazonaws.com/amazon-massive-dataset-1.1.tar.gz
+        file: amazon-massive-dataset-1.1.tar.gz
+        sha256: 4cba5faa11c71437928e17cb1b9b3d8b8e727e7ea363a3a9a8045e19c0491577
