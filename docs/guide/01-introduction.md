@@ -100,12 +100,12 @@ The repository holds two deliverables built with the same code:
    training labels for rows that have no human labels. If your data already has human labels, you need neither the
    teacher nor vLLM (chapter 9).
 2. **The general heads**: two heads, one for Gemma 4 E4B and one for Gemma 4 26B A4B, trained on the same data. They
-   answer new questions about text and JSON states, and about photos, without examples (zero-shot), in the kinds of
-   task they were trained and tested on: routing and tagging, rubric scoring and quality judgements, the coding of
-   free-text answers, and screening expressed as yes/no statements. Each is published on Hugging Face with a model
-   card ([E4B](../model-card.md), [26B A4B](../model-card-26b.md)), which lists its known shortfalls. The E4B head is
-   the default and the quickest way to start; where this guide says "the general head" without naming a backbone, it
-   means the E4B head, and section 7.10 compares the two.
+   answer new questions about text and JSON states, and about photos, without examples (zero-shot), in the kinds of task
+   they were trained and tested on: routing and tagging, rubric scoring and quality judgements, the coding of free-text
+   answers, and screening expressed as yes/no statements. Each is published on Hugging Face with a model card
+   ([E4B](../model-card.md), [26B A4B](../model-card-26b.md)), which lists its known shortfalls. The E4B head is the
+   default and the quickest way to start. Where this guide says "the general head" without naming a backbone, it means
+   the E4B head, and section 7.10 compares the two.
 
 With the toolkit you can also train **task-specific fine-tunes**: a head trained on your own labelled examples for one
 task, such as a coding scheme for survey answers. A fine-tune is usually more accurate and better at review readiness

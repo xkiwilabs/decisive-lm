@@ -39,13 +39,14 @@ scales it has not been trained on, it does this worse than the prompted base mod
 
 > **Known limitations of this preview.** It fails three checks of the
 > [release criteria](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/RELEASE.md), and was released with them
-> stated (Evaluation, below):
+> stated (Evaluation, below). They are counted per task: the first fails on two measures of one task (ρ and tie
+> AUROC), counted once. Counted per measure, as the 26B head's card counts, it is four:
 >
 > 1. **Two-sided social rating scales it has not been trained on.** On scales such as "strongly respectful … neither …
 >    strongly disrespectful", its confidence follows how extreme the text is rather than how much people agree. On
 >    Measuring Hate Speech's survey items it is a worse guide to which answers to check than the prompted base model.
 >    This is the main limitation. On such a task, calibrate each level on about 100 of your own ratings (task
->    calibration, guide §10.6) or fine-tune on them; on a development set this made its confidence follow rater
+>    calibration, guide §10.6) or fine-tune on them. On a development set this made its confidence follow rater
 >    agreement more closely than the prompted base model's under the same step.
 > 2. **Yes/no calibration on that survey.** The head's general calibration makes its yes/no answers there slightly
 >    worse (Brier score 0.154 against 0.147 uncalibrated). It is still better calibrated there than the prompted base
@@ -57,8 +58,8 @@ scales it has not been trained on, it does this worse than the prompted base mod
 > See [Limitations](#limitations-and-biases).
 >
 > **Calibrate before you set a review threshold.** Zero-shot, the head is usually underconfident on a new task.
-> Fitting two numbers on about 100 labelled items of your task brought its expected calibration error to 0.05 or
-> below on every task of the held-out suite
+> Fitting two numbers (one factor on the Choice temperatures and one on the Score temperatures) on about 100 labelled
+> items of your task brought its expected calibration error to 0.05 or below on every task of the held-out suite
 > ([guide §10.6](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/10-calibration.md)).
 
 ## Summary
@@ -79,7 +80,8 @@ scales it has not been trained on, it does this worse than the prompted base mod
 - Coding qualitative data, such as survey answers and open-ended responses, as a first coder whose confidence says
   which items a human coder should see.
 - Screening and extraction expressed as yes/no statements (Nouls).
-- Measuring a new decision task zero-shot before deciding whether to train a task-specific fine-tune.
+- Measuring a new decision task zero-shot (with no training examples of it) before deciding whether to train a
+  task-specific fine-tune.
 - Questions about photos: whether a photo can answer a question, and which of a few answers it supports (the one
   image task it was trained on, VizWiz-VQA, below).
 
@@ -93,7 +95,7 @@ Check accuracy and the review threshold on a labelled sample of your own task be
 - Free-text generation, explanation or summarisation.
 - Choice questions with more than 255 options.
 - Audio: this head was not trained on audio, and has not been evaluated on it.
-- Images beyond photo questions without calibration on your task: it was trained on one photo task (VizWiz-VQA).
+- Images beyond photo questions without calibration on your task, because it was trained on one photo task (VizWiz-VQA).
   Other kinds of image are zero-shot, and its probabilities on them need task calibration (below).
 - Questions whose answer is not in the state.
 
@@ -130,17 +132,19 @@ The head directory holds `adapter.pt` (LoRA weights and query-token embeddings),
 |---|---|---|
 | Hardware | Linux or macOS, with an NVIDIA GPU (CUDA) or Apple silicon (MPS) | the same |
 | Memory | a 24 GB GPU is enough. Predicting the coding study's 792 responses peaked at 16.0 GiB with 2,048 tokens per forward pass and at 17.8 GiB with 8,192. One request at the server's default limit of 12,288 tokens peaks at about 18.6 GiB | a 24 GB GPU is enough. A 300-item fine-tune peaked at 21.2 GiB with the default micro-batches of 8,192 tokens, at 18.5 GiB with 4,096 and at 16.7 GiB with 2,048, with gradient checkpointing (on by default). It took 15 to 25 minutes on one RTX PRO 6000 that was shared with other work |
+| Time | 0.10 s (102 ms p50) for a request of about 1,240 tokens with 20 options (four questions of five), batch 1, bf16, on one RTX PRO 6000 Blackwell Max-Q. The prompted E4B, which reads each question once per option order, took 613–803 ms for the same request on vLLM (`results/p0_latency.md`) | 15 to 25 minutes for a 300-item fine-tune (Memory, left) |
 | Disk | about 15 GB for Gemma 4 E4B and about 1 GB for the Python environment | the same, plus your data |
 
 The peaks are per process, as `nvidia-smi` reports them, so they include the CUDA context. A 16 GB GPU is not enough
 at these settings. The bf16 weights take about 15 GiB, so a smaller micro-batch saves only a few GiB.
 
-The CPU runs the test suite, not the model. On a Mac with large unified memory, fine-tune with
-`--no-checkpointing --max-tokens 2048`. A training row then takes about 0.14 s for a short message and about 2 s for a
-longer row, such as a free-text answer coded into one of eight categories. The full requirements are in guide
-[chapter 2](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/02-installation.md), and settings for a GPU
-shared with other work are in section 9.5 of
-[chapter 9](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/09-fine-tuning-for-your-task.md).
+The CPU runs the test suite, not the model. On a Mac with large unified memory, fine-tune (`scripts/train_p3.py`,
+guide chapter 9) with `--no-checkpointing --max-tokens 2048`. A training row then takes about 0.14 s for a short
+message and about 2 s for a longer row, such as a free-text answer coded into one of eight categories. The full
+requirements are in guide [chapter
+2](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/02-installation.md), and settings for a GPU shared
+with other work are in section 9.5 of [chapter
+9](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/09-fine-tuning-for-your-task.md).
 
 ## Training data
 
@@ -279,7 +283,7 @@ P0 is calibrated the same way as the head.
 |---|---|---|---|
 | VizWiz-VQA: photos by blind and low-vision people, 10 answerers each (trained on; scored on held-out photos) | photo questions | can the photo answer the question: AUROC 0.933; answer, 4 options: 71.1% right, ρ 0.633 | AUROC 0.788; 43.2%, ρ 0.292 (with task calibration) |
 | Coding study: 792 free-text answers, 8 codes, 4 human coders (Alhasan, Diaz Monfort & Richardson, under review; data not distributed) | a rule-heavy coding task, zero-shot | κ with coders 0.676 (coders with each other 0.739); errors caught in a 20% review 60.6%; ρ 0.206; ECE 0.396 zero-shot | κ 0.649; errors caught 41.9%; ρ 0.385 |
-| Seven public benchmarks (AG News, Banking77, DailyDialog, emotion, financial topics, SST-2, tweet topics) | zero-shot classification | more accurate than P0 on 3, level on 1, less on 3; ECE ≤ 0.09 after 100 rows (0.06–0.28 zero-shot) | ECE ≤ 0.08 after 100 rows |
+| Seven public benchmarks (AG News, Banking77, DailyDialog, emotion, financial topics, SST-2, tweet topics) | classification, zero-shot except Banking77, whose training portion is in the mix | more accurate than P0 on 3, level on 1, less on 3; ECE ≤ 0.09 after 100 rows (0.06–0.28 zero-shot) | ECE ≤ 0.08 after 100 rows |
 | MultiNLI (5 annotators per pair; held out) | review readiness on a task outside the mix | ρ 0.323 (Choice), 0.200 (Score); errors caught 47.2% (Choice) | ρ 0.261, 0.169; errors caught 39.2% |
 | Wikipedia toxicity (about 10 raters per comment; held out) | review readiness on an unseen two-sided social scale | ρ −0.010; tie AUROC 0.531; MAE 0.462 | ρ +0.057; tie AUROC 0.539; MAE 0.355 |
 
@@ -318,7 +322,7 @@ humour and sarcasm, which the head was never trained on, the same step takes ρ 
 
 CIFAR-10H (Peterson et al. 2019; CC BY-NC-SA 4.0): the CIFAR-10 test photos (Krizhevsky 2009; 32 × 32 pixels), each
 labelled by about 51 people, one Choice over ten classes. It is held out of every mix and was scored once, on the
-5,993 test photos; task calibration is fitted on the other 4,007 (`results/cifar10h_v5c_zero_shot.md`).
+5,993 test photos. Task calibration is fitted on the other 4,007 (`results/cifar10h_v5c_zero_shot.md`).
 
 | | Accuracy | ρ with agreement | Tie AUROC | ECE |
 |---|---|---|---|---|
@@ -346,11 +350,13 @@ of five draws gives accuracy 0.922 and ρ 0.429.
   Two-sided human ratings (Roadmap, 0.2) are the planned route.
 - **Two smaller calibration failures.** On Measuring Hate Speech's yes/no question, the head's general calibration
   leaves its Brier score slightly worse than uncalibrated (0.154 against 0.147), though better than the prompted base
-  model's. On HelpSteer2 its calibration error (0.123) is slightly above the task-specific fine-tune's (0.105).
-  Both are criteria it fails. Task calibration on your own items is the remedy here too.
+  model's. On HelpSteer2 its calibration error (0.123) is slightly above the task-specific fine-tune's (0.105). Both
+  are criteria it fails. Task calibration on your own items may help here too, but it has not been tested on these two
+  cases.
 - **Training noise.** Two training runs of the same recipe that differ only in their random seed differ on text
-  development sets about as much as two different training mixes do: by 0.06 in Score MAE, 2–3 points of accuracy,
-  and up to 0.17 in ρ (Development sets, above). Small differences between this head and others are not reliable.
+  development sets about as much as two different training mixes do: by 0.06 in Score MAE, 2–3 points of accuracy, and
+  up to 0.17 in ρ (`results/general_v5c_e4b.md`, the second-seed section). Small differences between this head and
+  others are not reliable.
 - **Calibration on a new task.** Confidence is well calibrated on the tasks the head was trained on. On a new task it
   is usually underconfident zero-shot, and on some (the suite's 60-intent task in languages it was not trained on)
   overconfident. Calibrate on about 100 labelled items of your task before setting a review threshold (guide §10.6).
@@ -359,7 +365,7 @@ of five draws gives accuracy 0.922 and ρ 0.429.
   ("code B unless C is also mentioned") are answered less well than by a model prompted to reason step by step. A
   fine-tune on labelled examples closes much of that gap (guide chapter 9, section 9.6).
 - **Inherited judgement.** Part of the training labels come from Gemma 4 26B A4B. The head can share that model's
-  blind spots and biases, and the human-labelled datasets carry the views of their raters.
+  systematic errors and biases, and the human-labelled datasets carry the views of their raters.
 - **Language.** Training is mostly English. Other languages are answered through the multilingual backbone and
   measured on the held-out suite.
 - **Self-contained options.** Each option is judged without seeing the others, so an "other" option needs a

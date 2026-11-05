@@ -1,7 +1,7 @@
 # General v5a: the first 1.0 candidate on its image and audio sets, and its text results against v4a
 
 General v5a (`general_v5a_e4b_r8_seed0`, E4B, rank 8) is v4a's text mix plus VizWiz-VQA (10,000 photos), SONYC-UST
-(8,000 street recordings) and all of Emozionalmente (`data/queues/general_v5a.sh`). Early stopping ended training at
+(8,000 street recordings) and all of Emozionalmente. Early stopping ended training at
 step 7,500 of 31,178; the bundle scored here is the one selected by validation calibration loss, at step 6,000.
 Scored with `scripts/eval_dataset.py` on gold_test, 95% CIs from 1,000 item-level bootstrap resamples.
 

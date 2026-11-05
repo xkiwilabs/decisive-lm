@@ -53,7 +53,7 @@ again.
 | `modality` | Any of `text`, `image`, `audio`. |
 | `language` | A language code (e.g. `en`) or a locale (e.g. `pl-PL`). |
 | `state` | A string or a JSON object. JSON is serialised compactly, in insertion order. |
-| `media` | Images or audio, each `{"type", "path" \| "data" \| "url"}` with exactly one source. |
+| `media` | Images or audio, each `{"type": "image" \| "audio"}` with exactly one of `"path"`, `"data"` or `"url"`, as in a request (section 4.5). A `url` is accepted in a record but refused when the head answers, so give a path or data. A relative `path` resolves against the repository root (section 9.9). |
 | `questions` | The request's questions in the request format of [chapter 4](04-requests-and-responses.md), keyed by question id. |
 | `targets` | Per question id, the labels to learn from (§8.2). A question with no target is masked out of the loss. |
 | `preprocess` | The render version and state budget used, and whether the state was truncated. |
@@ -65,7 +65,7 @@ The schema rejects unknown fields, so a misspelt key fails at once and is never 
 
 Each question may carry a **human** target, a **teacher** target, or both.
 
-- **Choice and Score** targets are distributions in `probabilities`. A Choice target is keyed by option name; a Score
+- **Choice and Score** targets are distributions in `probabilities`. A Choice target is keyed by option name. A Score
   target is keyed by level index as a string, `"0"` to `"n-1"`. The keys must match the question's options or levels
   exactly, the values must be non-negative, and they must sum to 1.
 - **Noul** targets are one number in `noul`, between 0 and 1: the share of raters who said yes.
@@ -294,7 +294,7 @@ Guidelines:
   on that, not on the row.
 - **Write questions the model can answer one leaf at a time.** Every option is judged alone, without seeing the others
   ([chapter 5](05-writing-good-questions.md)).
-- **Return the rows; don't write them.** `convert_dataset.py` checks and writes them, so a converter only builds
+- **Return the rows instead of writing them.** `convert_dataset.py` checks and writes them, so a converter only builds
   `Record`s.
 - **Give `gold_calib` enough items.** Temperatures are fitted on `gold_calib` and need about 100 questions of each type
   (chapter 10). The shares above put 12% of items there, which reaches 100 only at about 830 items. A dataset of 200

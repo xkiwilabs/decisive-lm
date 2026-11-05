@@ -1,6 +1,6 @@
 # Criterion 5 (contract), 26B A4B v5c head (2026-11-05)
 
-`data/queues/release_v5c_26b.sh` and `data/queues/release_v5c_26b_rest.sh`: the same checks as the E4B head's (`results/release_v5c_e4b/criterion5.md`), on the real backbone in float32.
+The same checks as the E4B head's (`results/release_v5c_e4b/criterion5.md`), on the real backbone in float32.
 
 **Conformance: 100% on every suite gold_test item.** That is 2,553 CUAD, 5,966 HelpSteer3, 3,384 Measuring Hate Speech and 29,739 MASSIVE rows, through the serving path (`check_bundle_*.txt`).
 

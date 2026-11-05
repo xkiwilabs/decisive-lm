@@ -164,8 +164,9 @@ statement such as urgency the value is the chance that a rater would say yes, no
   1120. A larger budget keeps more of the image's detail and adds as many tokens to the request (section 6.10). The
   same budget is used for labelling, training and inference.
 - Images need an instance with a vision path: a Gemma 4 backbone plus its image processor. `DecisiveLM.load` sets it
-  up. After `attach_bundle`, set `dlm.image_processor = decisivelm.model.load_image_processor("e4b")` yourself.
-- **Audio** (Gemma 4 E4B only; 26B A4B has no audio encoder): any format libsndfile reads (WAV, FLAC, OGG, MP3),
+  up. After `attach_bundle`, set `dlm.image_processor = decisivelm.model.load_image_processor("e4b")` yourself
+  (`"26b-a4b"` for a 26B A4B head).
+- **Audio** (Gemma 4 E4B only, because 26B A4B has no audio encoder): any format libsndfile reads (WAV, FLAC, OGG, MP3),
   mixed down to mono, resampled to 16 kHz and cut at 30 seconds. Each 40 ms becomes one soft token, so a 10-second
   clip adds about 250 tokens. It needs the `audio` extra (`uv sync --extra audio`). `DecisiveLM.load` sets up the
   feature extractor. After `attach_bundle`, set
@@ -263,12 +264,12 @@ dlm.confidence_method = "entropy"          # after attach_bundle; or DecisiveLM(
 `ordinal` treats option order as a scale, so it is only meaningful when every Choice in the request is also ordered,
 or when the request has only Scores. `usage.confidence_method` records the method used.
 
-To choose which answers a person should check, rank them by the top probability, `max(probabilities.values())`. The
-top probability is the calibrated chance that the answer is right, and it is the signal chapter
-[11](11-evaluation.md) measures against human agreement. For one question, `peak` ranks answers in the same order,
-because it rescales the top probability by the number of options. Across questions with different numbers of options
-the two rank differently, and the other methods can rank differently from either. For a Noul, `max(noul, 1 − noul)`
-plays the same role.
+To choose which answers a person should check, rank them by the top probability, `max(probabilities.values())`. The top
+probability is the chance that the answer is right once the head is calibrated for the task, and it is the signal
+chapter [11](11-evaluation.md) measures against human agreement. For one question, `peak` ranks answers in the same
+order, because it rescales the top probability by the number of options. Across questions with different numbers of
+options the two rank differently, and the other methods can rank differently from either. For a Noul,
+`max(noul, 1 − noul)` plays the same role.
 
 ## 4.9 Worked example
 
@@ -314,16 +315,17 @@ Settings come only from environment variables (the full list is in the module's 
   must be a LoRA bundle (one with an `adapter.pt`) with the same `rank`, `alpha` and `target_regex` under `lora` in its
   `calibration.json`, on the same backbone revision. The server refuses to start otherwise. `DECISIVELM_DEFAULT` names
   the default.
-- **Where it listens**: `DECISIVELM_HOST` (default `127.0.0.1`; several addresses can be joined by commas) and
+- **Where it listens**: `DECISIVELM_HOST` (default `127.0.0.1`, or several addresses joined by commas) and
   `DECISIVELM_PORT` (default 8003). With `DECISIVELM_AUTH=none`, the server refuses to start on any address other than
   the loopback addresses (`127.0.0.1`, `::1`, `localhost`). Override this with `DECISIVELM_ALLOW_UNAUTHENTICATED=1`
   only where nobody but trusted callers can reach that address.
 - **Limits**: `DECISIVELM_MEMORY_GB` caps the process's GPU memory, so an oversized request fails in this server, not in
-  another program on the same GPU. `DECISIVELM_MAX_TOKENS` (default 12,288) refuses longer requests with `413`. A
-  state is cut at 8,192 tokens (4.3), so the default leaves about 4,000 tokens for the questions and their options; a
-  request at the default limit peaks at about 18.6 GiB on E4B, inside a 20 GB `DECISIVELM_MEMORY_GB` cap. The 26B A4B general head, which computes in float32, peaks at 68.6 GB
-  at that limit (57.2 GB after loading), so give it `DECISIVELM_MEMORY_GB=72`. It answers a 20-block request in about
-  0.47 s over HTTP, against about 0.10 s for the E4B head, and the server refuses audio for it with `400`.
+  another program on the same GPU. `DECISIVELM_MAX_TOKENS` (default 12,288) refuses longer requests with `413`. A state
+  is cut at 8,192 tokens (4.3), so the default leaves about 4,000 tokens for the questions and their options. A request
+  at the default limit peaks at about 18.6 GiB on E4B, inside a 20 GB `DECISIVELM_MEMORY_GB` cap. The 26B A4B general
+  head, which computes in float32, peaks at 68.6 GB at that limit (57.2 GB after loading), so give it
+  `DECISIVELM_MEMORY_GB=72`. It answers a 20-block request in about 0.47 s over HTTP, against about 0.10 s for the E4B
+  head, and the server refuses audio for it with `400`.
 - **Who may call it**: `DECISIVELM_AUTH` is `none` (the default, for a server only this machine can reach), `keys` (a
   `Bearer` token from `DECISIVELM_API_KEYS`), or `litellm` (any key a LiteLLM proxy at `DECISIVELM_LITELLM_URL` accepts,
   so the people who already have a key for that proxy can call this server through it).

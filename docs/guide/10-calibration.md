@@ -74,7 +74,7 @@ student (the model being trained) to the teacher instead. A temperature fitted o
 look better than it is. `gold_calib` and `gold_test` are therefore separate, fixed, human-labelled splits
 ([chapter 8](08-data-format.md)).
 
-**Why soft targets.** The fit uses the full share of raters, not just the majority. An item where raters split 3–2
+**Why soft targets.** The fit uses the full share of raters, not the majority alone. An item where raters split 3–2
 should get about 60% confidence, not 100%. Fitting on shares rewards a model that is unsure exactly where people are.
 
 `scripts/train_p1.py` and `scripts/train_p3.py` fit calibration automatically after training and write calibrated
@@ -88,8 +88,8 @@ calib = fit_calibration(qs)                     # Calibration(temperatures={...}
 rows = predictions(test_qs, calib)              # calibrated answers in the predictions format
 ```
 
-The P0 baseline, the base model prompted directly ([chapter 9](09-fine-tuning-for-your-task.md)), is calibrated more
-simply. `scripts/run_p0.py` fits a single temperature for its one question on `gold_calib`.
+The P0 baseline, the base model prompted directly ([chapter 9](09-fine-tuning-for-your-task.md)), has one temperature,
+which `scripts/run_p0.py` fits on `gold_calib` for its one question.
 
 ## 10.4 Where calibration is stored
 
@@ -105,10 +105,10 @@ Calibration lives in the bundle's `calibration.json`, beside the training metada
 }
 ```
 
-`attach_bundle` reads `temperatures`, `b_noul` and, where the bundle has one, a `tasks` entry (task calibration,
-section 10.6) into a `decisivelm.head.Calibration`, and every answer the bundle gives goes through
-`decisivelm.head.readout` with it. Training-time predictions and served answers therefore use the
-same calibration.
+`attach_bundle` reads `temperatures`, `b_noul` and, where the bundle has one, a `tasks` entry (task calibration, section
+10.6) into a `decisivelm.head.Calibration`, and every answer the bundle gives goes through `decisivelm.head.readout`
+with it. Without a `tasks` entry (section 10.6), training-time predictions and served answers therefore use the same
+calibration.
 
 ## 10.5 Refitting without rerunning the model
 
@@ -163,9 +163,9 @@ uv run python scripts/recalibrate.py --name <head> --new-task <your stem> --suff
 two factors by NLL of the human majority answer, with ties left out (ECE is measured against the same answer, section
 10.7), and writes a new bundle `bundles/<head>_mine/`. Its `calibration.json` records the factors, the task and the
 temperatures it started from. It also rewrites the bundle's predictions on your task through the new calibration, as
-`data/predictions/<head>_mine__<your stem>.jsonl`. With 100 items this brings the released head's ECE to 0.09 or
-below on all seven public benchmarks and to 0.08 or below on every task of the release suite. The release criteria
-measure calibration after this step (docs/RELEASE.md, criterion 2).
+`data/predictions/<head>_mine__<your stem>.jsonl`. With 100 items this brings the E4B head's ECE to 0.09 or below on all
+seven public benchmarks and to 0.05 or below on every task of the release suite. The release criteria measure
+calibration after this step ([chapter 15](15-release-criteria.md), criterion 2).
 
 **Why not one correction for every new task?** An earlier candidate (General v3c) shipped with one: the same two
 factors, fitted once on a human-labelled task held out of the mix (MultiNLI) and applied everywhere. It brought every

@@ -1,6 +1,6 @@
 # CIFAR-10H zero-shot: E4B v5c head against P0
 
-Held out of every mix, never trained on; scored once on the 5,993 gold_test photos, task calibration fitted on the 4,007 gold_calib photos (`scripts/taskcal_report.py`; predictions `data/queues` by hand, predict_bundle bf16, 2026-11-03). v3d's run: `results/cifar10h_v3d_zero_shot.md`.
+Held out of every mix, never trained on; scored once on the 5,993 gold_test photos, task calibration fitted on the 4,007 gold_calib photos (`scripts/taskcal_report.py`; predictions from `scripts/predict_bundle.py` in bf16, 2026-11-03). v3d's run: `results/cifar10h_v3d_zero_shot.md`.
 
 ## cifar10h
 

@@ -14,19 +14,19 @@ is [docs/RELEASE.md](../RELEASE.md).
 
 ## 15.1 Two bars: 0.x and 1.0
 
-- **0.x (preview)**: the general head is *never worse* than P0 on the frozen held-out suite (15.2), and it is
-  calibrated well enough to set a review threshold on. P0 is the base model, Gemma 4 E4B with its weights unchanged
-  (the *frozen* backbone), prompted to answer the same questions (chapter 12.8). For a head on Gemma 4 26B A4B, P0 is
-  26B A4B prompted the same way, which is then also the teacher. That bar is higher: on the ten-language intents the
+- **0.x (preview)**: the general head is *never worse* than P0 on the frozen held-out suite (15.2), and it is calibrated
+  well enough to set a review threshold on. P0 is the base model, Gemma 4 E4B with its weights unchanged (the *frozen*
+  backbone), prompted to answer the same questions (chapter 12.8). For a head on Gemma 4 26B A4B, P0 is 26B A4B prompted
+  the same way, which is then also the teacher. That bar is higher. On the ten-language intents (MASSIVE, 15.2), the
   prompted 26B A4B is right 73.1% of the time, against 65.8% for the prompted E4B.
 - **1.0**: the general head *beats* P0 on review readiness (whether its confidence says which answers a person should
   check, chapter 11.3) and passes the stricter calibration gate on the same suite.
 
-The comparison is always with P0, because P0 is what a user would get from Gemma 4 E4B with no DecisiveLM at all. A 0.x
-preview need only be no worse than P0. A 1.0 release must beat P0 on review readiness, because review readiness is what
-the head is for, and a user who needs only P0's can prompt Gemma 4 E4B with no head. The 26B teacher (Gemma 4 26B A4B,
-the larger open model that wrote and labelled part of the training data, chapter 12) and task-specific fine-tunes are
-reported beside it for context.
+The comparison is always with P0, the same base model prompted with no DecisiveLM. A 0.x preview need only be no worse
+than P0. A 1.0 release must beat P0 on review readiness, because the head is built for review readiness, and a user who
+needs only P0's review readiness can prompt the base model with no head. The 26B teacher (Gemma 4 26B A4B, the open
+model that wrote and labelled part of the training data, chapter 12, and for a 26B A4B head the same model as P0) and
+task-specific fine-tunes are reported beside it for context.
 
 **What the general head is for.** The general head is meant to be very good at every task: better than prompting the
 base model, close to a task-specific fine-tune on the tasks it was trained on, and as good as that fine-tune at saying
@@ -177,14 +177,20 @@ head and once from the base model. Those started from the general head must be n
 metric and on review readiness where it can be measured, and better at 100 items on at least one task. This tests the
 claim that people who need excellence on their own task get there with fewer labels by starting from the general head.
 
+**The E4B head's exception.** Scored once against the prompted E4B, the E4B head fails three checks: review readiness on
+Measuring Hate Speech's Scores (criterion 1: ρ(top p, agreement) 0.078 against 0.201), Brier on Measuring Hate Speech's
+yes/no question after its general calibration (criterion 2: 0.154 against 0.147 uncalibrated), and calibration error on
+HelpSteer2 against its specialist (criterion 4: 0.123 against 0.105). It was released as a preview with the failures
+stated on its model card ([docs/RELEASE.md](../RELEASE.md), change log 2026-11-03).
+
 **The 26B A4B head's exception.** Scored once against the prompted 26B A4B, the 26B A4B head fails five checks: the
 accuracy on MASSIVE (criterion 3: 0.680 against 0.731), errors caught in a 20% review and the lowest within-category ρ
 on Measuring Hate Speech's Scores, the lowest within-category ρ on HelpSteer3 (criterion 1), and Brier after the
-per-task step on Measuring Hate Speech's Scores (criterion 2: 0.6403 against 0.6399 before). It passes criteria 4 to 7.
-Its criterion 8 is scheduled for 7 to 8 November 2026. It was released as a preview, with the failures stated on its
-model card, by a decision made after its result was seen, and the change log in [docs/RELEASE.md](../RELEASE.md)
-records it. It is compared with the same E4B specialists in criterion 4 and is better than the E4B head on the main
-measure of every suite task (model card of the 26B A4B head).
+per-task step on Measuring Hate Speech's Scores (criterion 2: 0.6403 against 0.6399 before, with the whole interval of
+the difference above zero). It passes criteria 4 to 7. Its criterion 8 is scheduled for 7 to 8 November 2026. It was
+released as a preview, with the failures stated on its model card, by a decision made after its result was seen, and the
+change log in [docs/RELEASE.md](../RELEASE.md) records it. It is better than the E4B head on the main measure of every
+suite task ([model card of the 26B A4B head](../model-card-26b.md)).
 
 ## 15.4 Scoring a candidate once
 
@@ -197,7 +203,8 @@ uv run python scripts/score_suite.py --candidate <bundle name> --calib-data data
 predictions must exist:
 
 - the candidate's on each suite set (`scripts/predict_bundle.py`);
-- P0's and the teacher's on each suite set (`scripts/label_teacher.py`, with `--teacher gemma4_e4b` for P0);
+- P0's and the teacher's on each suite set (`scripts/label_teacher.py`, with `--teacher gemma4_e4b` for an E4B
+  candidate's P0, while a 26B A4B candidate's P0 is the teacher);
 - P0's and the teacher's on the candidate mix's `gold_calib` rows.
 
 P0 and the teacher are calibrated exactly the way the candidate is, on the same human-labelled `gold_calib` rows of the

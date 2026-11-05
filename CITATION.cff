@@ -6,7 +6,7 @@ authors:
   - family-names: Richardson
     given-names: Michael J.
     affiliation: Macquarie University
-version: 0.0.1
+version: 0.1.0
 license: Apache-2.0
 repository-code: "https://github.com/xkiwilabs/decisive-lm"
 keywords:

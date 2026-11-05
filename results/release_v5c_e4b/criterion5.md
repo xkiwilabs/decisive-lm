@@ -1,6 +1,6 @@
 # Criterion 5 (contract), E4B v5c head (2026-11-02)
 
-`data/queues/release_v5c_e4b.sh`, the same checks as v3d's (`results/release_v3d/`), on the real backbone in bf16.
+The same checks as v3d's (`results/release_v3d/`), on the real backbone in bf16.
 
 **Conformance: 100% on every suite gold_test item.** That is 2,553 CUAD, 5,966 HelpSteer3, 3,384 Measuring Hate Speech and 29,739 MASSIVE rows, through the serving path (`check_bundle_*.txt`).
 

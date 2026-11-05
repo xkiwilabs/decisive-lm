@@ -1,19 +1,20 @@
 # 12. Teacher labelling
 
-A *teacher* is a larger open model that labels rows which have no human answers, so that the head can learn from
-many more examples than people could rate. DecisiveLM asks the teacher through a vLLM server's OpenAI-compatible API.
-vLLM is an open-source server that runs a language model on a GPU and answers requests in the format of OpenAI's API.
-You can start one on your own GPU or use an existing one, named by `base_url` in the teacher's entry (12.1). A language
-model gives every token it could write next a probability, and the server returns the logarithms of the most likely
-ones (*log-probabilities*). The labeller reads a probability distribution over the answer labels from them, never a
-single sampled answer. This chapter covers how the teacher is prompted and how its answers become calibrated training
-targets. The same method, run on the student's own backbone, is the P0 baseline every model is compared with.
+A *teacher* is an open model, usually larger than the student, that labels rows which have no human answers, so that the
+head can learn from many more examples than people could rate. DecisiveLM asks the teacher through a vLLM server's
+OpenAI-compatible API. vLLM is an open-source server that runs a language model on a GPU and answers requests in the
+format of OpenAI's API. You can start one on your own GPU or use an existing one, named by `base_url` in the teacher's
+entry (12.1). A language model gives every token it could write next a probability, and the server returns the
+logarithms of the most likely ones (*log-probabilities*). The labeller reads a probability distribution over the answer
+labels from them, never a single sampled answer. This chapter covers how the teacher is prompted and how its answers
+become calibrated training targets. The same method, run on the student's own backbone, is the P0 baseline every model
+is compared with.
 
 ## 12.1 The teacher and its configuration
 
-Teachers are registered in `configs/teachers.yaml`. The default teacher is Gemma 4 26B A4B (`gemma4_26b_a4b`).
-The student's own backbone, Gemma 4 E4B prompted directly, is registered as `gemma4_e4b`. Each entry records what
-the labeller needs and what every teacher target stores:
+Teachers are registered in `configs/teachers.yaml`. The default teacher is Gemma 4 26B A4B (`gemma4_26b_a4b`). Gemma 4
+E4B prompted directly, the backbone of an E4B student, is registered as `gemma4_e4b`. A 26B A4B student's backbone is
+the default teacher itself. Each entry records what the labeller needs and what every teacher target stores:
 
 | Key | Meaning |
 |---|---|
@@ -85,7 +86,7 @@ read one digit at a time:
 
 1. One request reads the first digit. Only digits that begin a real label count, renormalised among themselves.
 2. For each first digit holding at least 0.1% of the probability, one more request reads the next digit after it.
-3. A prefix below 0.1% is not expanded: its probability is spread evenly over the labels it would lead to.
+3. A prefix below 0.1% is not expanded. Its probability is spread evenly over the labels it would lead to.
 
 Gemma's tokenizer splits numbers into single-digit tokens, and the separating space is its own token. The prompt
 therefore ends in `Answer: ` and the next token is the first digit. This per-option scoring reads every option's
@@ -133,7 +134,7 @@ uv run python scripts/label_teacher.py --teacher gemma4_26b_a4b \
 - `--splits` chooses which splits to label (default `gold_calib gold_test`). Use `--splits train val` for generated
   rows.
 - `--chunk` sets how many rows are written at a time. `--groups-in-parallel` sets how many question groups are labelled
-  at once; rows asking the identical question form one group and share prompts.
+  at once. Rows asking the identical question form one group and share prompts.
 - Raw distributions go to `data/teacher/<stem>__<teacher>.jsonl`, one line per row, appended chunk by chunk.
 - Jobs are **resumable**: a restart skips rows already in the output file, so a job can run overnight or over several
   days.
@@ -142,8 +143,8 @@ uv run python scripts/label_teacher.py --teacher gemma4_26b_a4b \
   `data/predictions/teacher_<stem>__<teacher>.jsonl`, ready for `scripts/eval_dataset.py`. A file with `gold_test` rows
   but no `gold_calib` rows (a test-only benchmark) gets its raw, uncalibrated distributions there instead.
 
-Every output line records the teacher model, its revision, the vLLM version, `max_logprobs` and the SHA-256 hash of
-each prompt template. A label can always be traced to the exact prompt and weights that produced it. A mixture-of-experts
+Every output line records the teacher model, its revision, the vLLM version, `max_logprobs` and the SHA-256 hash of each
+prompt template. A label can always be traced to the exact prompt and weights that produced it. A mixture-of-experts
 teacher such as Gemma 4 26B A4B sends each token to 8 of its 128 experts, and where two experts score almost equally,
 the choice can change with what else the server is batching (`results/M0.md`). Its log-probabilities for the same row
 can therefore differ between runs, so results are compared as distributions, not as exact numbers.
@@ -179,7 +180,8 @@ Prompting the student's own frozen backbone this way, with no training, is the *
 trained model must be compared with, because a user gets it from the base model with no fine-tuning.
 There are three ways to run it:
 
-- **On a vLLM server**: `scripts/label_teacher.py --teacher gemma4_e4b`, exactly as for the teacher.
+- **On a vLLM server**: `scripts/label_teacher.py --teacher gemma4_e4b`, exactly as for the teacher. For a student on
+  26B A4B, use `--teacher gemma4_26b_a4b`, the teacher itself.
 - **Locally, on one data file**: `scripts/run_p0.py --data … [--backbone e4b]` loads the backbone with transformers
   and scores one question per row (`--question`, default `intent`). It writes raw distributions to
   `data/predictions/P0_<data>_<backbone>_raw.jsonl`. When every item is done, it fits one temperature on `gold_calib`
@@ -239,7 +241,8 @@ teacher's own labels would calibrate the student to the teacher rather than to p
 
 ## 12.10 What the teacher cannot fix
 
-The student learns from the teacher, so it inherits the teacher's blind spots. Four safeguards limit this:
+The student learns from the teacher, so it inherits the teacher's blind spots. A student whose backbone is the teacher,
+such as the 26B A4B general head, can share them more directly (section 13.7). Four safeguards limit this:
 
 - **Human gold.** The seed datasets' human labels train the head alongside the teacher's.
 - **Human calibration.** Every temperature, the teacher's and the student's, is fitted on human-labelled rows.

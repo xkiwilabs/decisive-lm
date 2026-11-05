@@ -6,8 +6,9 @@ labels, measuring the baseline to beat, training, calibrating, evaluating and pu
 starts either from base Gemma 4 or from the general head (§9.6), and needs one GPU.
 
 As in [chapter 1](01-introduction.md), a **head** is the whole trained bundle you load, and the general head is one.
-The **scorer** is the small network inside a head that turns one of the backbone's hidden states into one score
-([chapter 6](06-how-it-works.md), section 6.5).
+Where this chapter says "the general head" without naming a backbone, it means the E4B head. The **scorer** is the small
+network inside a head that turns one of the backbone's hidden states into one score ([chapter 6](06-how-it-works.md),
+section 6.5).
 
 ## 9.1 The path at a glance
 
@@ -251,23 +252,21 @@ uv run python scripts/train_p3.py --data data/processed/my_task.jsonl \
 and `1e-3`. As with a P1 warm start (§9.5), the defaults knock the general head's trained weights off their optimum
 before your labels can guide them.
 
-**From the 26B A4B head.** Use `--backbone 26b-a4b --dtype float32 --init-bundle
-bundles/decisivelm-26b-a4b-general` with the same learning rates. The fine-tune computes in float32 (section 9.5) and
-needs a GPU with about 72 GB free for the head itself; memory for a fine-tune has not been measured (training the
-general head on its full mix peaked at 67.6 GB with 4,096-token micro-batches). The comparison below was run with the
-E4B head only. Whether the 26B A4B head is a better starting point than the base model (release criterion 8) has not
-yet been measured: it is scheduled for 7 to 8 November 2026, and until then use the E4B head or the base model if you
-need a result you can rely on.
+**From the 26B A4B head.** Use `--backbone 26b-a4b --dtype float32 --init-bundle bundles/decisivelm-26b-a4b-general`
+with the same learning rates. The fine-tune computes in float32 (section 9.5) and needs a GPU with about 72 GB free for
+the head itself. Memory for a fine-tune has not been measured (training the 26B A4B head on its full mix peaked at 67.6
+GB with 4,096-token micro-batches). The comparison below was run with the E4B head only. Whether the 26B A4B head is a
+better starting point than the base model (release criterion 8) has not yet been measured. It is scheduled for 7 to 8
+November 2026, and until then use the E4B head or the base model if you need a result you can rely on.
 
-**How much it helps (E4B head).** We compared fine-tunes from the general head with fine-tunes from the base model (release
-criterion 8, [chapter 15](15-release-criteria.md)). Each was trained on 100 and on 300 labelled items of two tasks
-outside the general head's training mix. Each start (an arm) was trained three times with different random seeds.
-Both arms used the same items and the same settings
-(`--epochs 10 --eval-every 5 --patience 4 --limit-val 200 --select loss`). The base arm used its default learning
-rates and `--standardize-rows` on its training items, and the general arm used the rates above. Each fine-tune was
-calibrated on its own task's `gold_calib` and scored on `gold_test`. Values are means over the three seeds. Δ is the
-general start minus the base start, with a 95% interval from item-level bootstrap resamples
-([chapter 11](11-evaluation.md), section 11.4).
+**How much it helps (E4B head).** We compared fine-tunes from the general head with fine-tunes from the base model
+(release criterion 8, [chapter 15](15-release-criteria.md)). Each was trained on 100 and on 300 labelled items of two
+tasks outside the general head's training mix. Each start (an arm) was trained three times with different random seeds.
+Both arms used the same items and the same settings (`--epochs 10 --eval-every 5 --patience 4 --limit-val 200 --select
+loss`). The base arm used its default learning rates and `--standardize-rows` on its training items, and the general arm
+used the rates above. Each fine-tune was calibrated on its own task's `gold_calib` and scored on `gold_test`. Values are
+means over the three seeds. Δ is the general start minus the base start, with a 95% interval from item-level bootstrap
+resamples ([chapter 11](11-evaluation.md), section 11.4).
 
 The measures are defined in chapter 11 (sections 11.2 and 11.3):
 
@@ -279,10 +278,10 @@ The measures are defined in chapter 11 (sections 11.2 and 11.3):
   items it is least sure of. Confidence unrelated to errors catches about 0.20.
 - **ECE** (expected calibration error): the average gap between the model's top probability and how often it is
   right. 0 is perfect, and well under 0.1 is usable for a review threshold.
-- **Soft NLL** (negative log-likelihood): the mean of −log p over the raters' answers, divided by `log n` so that a
-  uniform guess scores 1. It is lowest when the probabilities match the raters' shares.
+- **Soft NLL** (negative log-likelihood): the mean of −log p over the raters' answers, divided by `log n`, where n is
+  the number of options, so that a uniform guess scores 1. It is lowest when the probabilities match the raters' shares.
 
-MultiNLI (does the second sentence follow from the first?; 3 options, five annotators per pair, 4,823 test pairs):
+MultiNLI (whether the second sentence follows from the first; 3 options, five annotators per pair, 4,823 test pairs):
 
 | Measure | 100 items: base | 100: general | Δ (95% CI) | 300 items: base | 300: general | Δ (95% CI) |
 |---|---|---|---|---|---|---|
@@ -306,12 +305,12 @@ A private coding study (8 codebook categories, four coders, 792 test responses; 
 
 On both tasks and at both sizes, starting from the general head gave a fine-tune whose confidence followed human
 agreement more closely and whose review caught more of its errors, and it was not significantly worse on any measure.
-Accuracy was higher on both tasks at both sizes, by 1.2 points at 300 coding items. On the coding study the gains in
-accuracy and in ρ are largest with 100 items, and 100 items from the general head came within 1.6 points of a fine-tune
-from base on all 2,592 training items (0.935). On MultiNLI the gains are about the same at both sizes. Tie AUROC was
-slightly higher from the general head on MultiNLI at 300 items, and did not differ clearly otherwise. The intervals
-reflect the sampling of test items, not the spread between seeds. The per-seed values are in
-`results/c8_general_v5c_e4b_r8_seed0.md`, written by `scripts/score_c8.py`.
+Accuracy was higher on both tasks at both sizes, by 1.2 to 5.2 points. On the coding study the gains in accuracy and in
+ρ are largest with 100 items, and 100 items from the general head came within 1.6 points of a fine-tune from base on all
+2,592 training items (0.935). On MultiNLI the gains are about the same at both sizes. Tie AUROC was slightly higher from
+the general head on MultiNLI at 300 items, and did not differ clearly otherwise. The intervals reflect the sampling of
+test items, not the spread between seeds. The per-seed values are in `results/c8_general_v5c_e4b_r8_seed0.md`, written
+by `scripts/score_c8.py`.
 
 ## 9.7 Evaluating
 
@@ -395,14 +394,15 @@ print(response["answers"]["team"])
 - A fine-tune answers any question it is given, including options and wording it never trained on. Only a question of a
   type it never trained on, such as a Noul asked of a fine-tune trained on Choice questions, gets a warning in
   `dlm.warnings`. Its calibration was fitted only on the questions in your `gold_calib`, so treat answers to other
-  questions as uncalibrated. Ask the general head those questions instead.
+  questions as uncalibrated. Ask the general head those questions instead, and calibrate it on about 100 labelled items
+  of each before you set a review threshold (section 10.6).
 - A bundle belongs to one backbone. `calibration.json` records its model id and revision. `DecisiveLM.load` loads that
   backbone, and `attach_bundle` and the check scripts refuse a different one.
 - To score a whole file with a bundle, use `scripts/predict_bundle.py` ([section 3.8](03-quickstart.md)).
 
 ## 9.9 Images and audio
 
-A task whose states are photos or recordings is fine-tuned exactly like a text task. Each row lists its media
+A task whose states are photos or recordings is fine-tuned like a text task. Each row lists its media
 ([chapter 8](08-data-format.md)), with paths relative to the repository root:
 
 ```json
@@ -414,7 +414,8 @@ The steps are the same as for text:
 ```bash
 # P0: the base model prompted with each row's image or clip, on this machine's GPU
 uv run python scripts/label_teacher.py --teacher gemma4_e4b --local --data data/processed/my_task.jsonl
-# the fine-tune: from the general head (shown) or from the base model (--standardize-rows N instead of --init-bundle)
+# the fine-tune: from the general head (shown), or from the base model with --standardize-rows N in place of
+# --init-bundle and the default learning rates (section 9.6)
 uv run python scripts/train_p3.py --data data/processed/my_task.jsonl --name my_task_e4b_seed0 --seed 0 \
     --backbone e4b --adapter user --rows-per-step 16 --limit-val 200 --select loss --max-tokens 4096 --patience 4 \
     --epochs 3 --eval-every 50 --init-bundle bundles/decisivelm-e4b-general --lr-lora 5e-5 --lr-head 1e-5
@@ -422,40 +423,43 @@ uv run python scripts/eval_dataset.py --data data/processed/my_task.jsonl --refe
     --predictions P0=data/predictions/teacher_my_task__gemma4_e4b.jsonl P3=data/predictions/my_task_e4b_seed0.jsonl
 ```
 
-- Audio needs the `audio` extra (`uv sync --extra audio`) and the E4B backbone; 26B A4B has no audio encoder.
+- Audio needs the `audio` extra (`uv sync --extra audio`) and the E4B backbone. 26B A4B has no audio encoder.
 - Images are encoded at 280 soft tokens by default and audio at one token per 40 ms (up to 30 s), so a row costs more
-  than a short text. Keep `--max-tokens 4096`.
+  than a short text. Use `--max-tokens 4096`, as in the command above (the default is 8192).
 - For judgements about fine visual detail, such as photo quality, give images more tokens with `--image-budget 560` or
   `--image-budget 1120` (Gemma 4 also accepts 70 and 140). The bundle records it, and `predict_bundle.py` uses the
   same. Training takes longer: on photo quality, about 40 minutes at 1,120 against 8 at 280.
 - P0's prompt places the image or clip where the state starts, as the fine-tune's input does.
 
-Three public examples show what to expect. Each has many raters per item, so the targets carry real disagreement.
-"The general head" in these examples is General v3d, an earlier head trained on text only; they have not been
-repeated with the released head, which is also trained on photos. On the test split, seed 0 (the 300-item runs were
-repeated on two more seeds, each with its own 300 items):
+Three public examples show what to expect. Each has many raters per item, so the targets carry real disagreement. "The
+general head" in these examples is the released E4B head (General v5c). None has been run from the 26B A4B head. On the
+test split, seed 0 (the 300-item runs were repeated on two more seeds, each with its own 300 items):
 
 | Example | Raters | P0 | 300 items, from base | 300 items, from the general head | All items, from base | All items, from the general head |
 |---|---|---|---|---|---|---|
-| Photo quality (KonIQ-10k), MAE / ρ | ~107 per photo | 0.389 / 0.12 | 0.228 / 0.09 | 0.220 / 0.05 | **0.145** / 0.36 | 0.155 / **0.37** |
-| Voice emotion (CREMA-D), accuracy / ρ | ~10 per clip | 0.551 / 0.01 | 0.577 / 0.11 | 0.613 / 0.15 | **0.755** / **0.51** | 0.745 / 0.49 |
-| Is it alive? (THINGSplus), MAE / ρ | ~37 per object | 0.365 / 0.48 | 0.239 / 0.50 | **0.184** / **0.64** | 0.186 / 0.61 | 0.168 / 0.67 |
+| Photo quality (KonIQ-10k), MAE / ρ | ~107 per photo | 0.389 / 0.12 | 0.228 / 0.09 | 0.209 / 0.10 | **0.145** / **0.36** | 0.159 / 0.32 |
+| Voice emotion (CREMA-D), accuracy / ρ | ~10 per clip | 0.551 / 0.01 | 0.577 / 0.11 | 0.605 / 0.13 | **0.755** / **0.51** | 0.734 / 0.48 |
+| Is it alive? (THINGSplus), MAE / ρ | ~37 per object | 0.365 / 0.48 | 0.239 / 0.50 | 0.177 / 0.64 | 0.186 / 0.61 | **0.162** / **0.67** |
 
 ρ is the correlation of the top probability with per-item rater agreement (chapter 11). What they show:
 
 - **Prompted, the base model barely does these tasks.** On photo quality it beats always answering the most common
-  level, but its confidence hardly follows the raters' agreement; on voice emotion it answers "neutral" for 91% of
+  level, but its confidence hardly follows the raters' agreement. On voice emotion it answers "neutral" for 91% of
   clips, with confidence unrelated to the listeners' agreement.
-- **With enough items, a fine-tune learns them**, and its confidence follows where people disagree.
+- **With enough items, a fine-tune learns them**, and its confidence follows where people disagree. With all the
+  items, the starting point matters less. The fine-tune from the base model is best on voice emotion and photo quality,
+  and the one from the general head on the living-thing task.
 - **With 300 items, it depends on the task.** From the base model, voice emotion is not learned on any of the three
-  seeds (it scores the same as always answering "neutral"), and photo quality gets more accurate but its confidence
-  does not yet follow agreement. Starting from the general head (v3d, trained on text only) helps voice emotion on every
-  seed (accuracy +0.030 to +0.035) and the living-thing task on every seed (MAE 0.013 to 0.055 lower), where the
-  judgement is about the named object rather than the pixels: with 300 objects it matches a fine-tune from the base
-  model on all 1,128. It does not help photo quality (MAE −0.008, +0.008, 0.000).
+  seeds (it scores the same as always answering "neutral"), and photo quality gets more accurate but its confidence does
+  not yet follow agreement. Starting from the general head helps voice emotion on every seed (accuracy +0.021 to
+  +0.042). It helps the living-thing task on two of the three seeds (MAE 0.062 and 0.019 lower, and level on the third),
+  where the judgement is about the named object rather than the pixels. With 300 objects it does as well as a fine-tune
+  from the base model on all 1,128. It gives no consistent gain on photo quality (MAE 0.018 lower, 0.008 higher and
+  level).
 - **More image detail helps photo quality.** At 1,120 image tokens instead of 280, MAE falls on every seed: by 0.033,
-  0.014 and 0.017 from the base model, and by 0.025, 0.008 and 0.019 from the general head (the middle one within
-  noise).
+  0.014 and 0.017 from the base model, and by 0.012, 0.021 and 0.015 from the general head.
+- **The earlier head gave the same results.** The same runs from General v3d, an earlier head trained on text only,
+  differed from these by no more than the spread between seeds.
 
 To run an example yourself (`koniq10k`, `crema_d` or `things_living`):
 
@@ -464,8 +468,9 @@ uv run python scripts/fetch_dataset.py things_living
 uv run python scripts/convert_dataset.py things_living
 ```
 
-Results: `results/media_<example>_gold_test.md`; the three seeds and the image-detail runs:
-`results/media_seeds_gold_test_300.md`. The datasets and their licences are in
+Results: `results/media_<example>_gold_test_v5c.md`; the three seeds and the image-detail runs:
+`results/media_seeds_gold_test_300_v5c.md`; the comparison with v3d's runs: `results/media_v5c.md`. The datasets and
+their licences are in
 [chapter 14](14-datasets.md) (section 14.3).
 
 Next: [10. Calibration](10-calibration.md)

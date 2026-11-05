@@ -51,7 +51,7 @@ A request is laid out as a tree of token segments:
 
 - **Prefix**: the beginning-of-sequence token, then each image's placeholder tokens, then `State:` and the state
   text. It is computed once and shared by every question.
-- **Question segment**: `Q:` and the question's instructions (`decisivelm/render.py`). A Noul has none; its statement
+- **Question segment**: `Q:` and the question's instructions (`decisivelm/render.py`). A Noul has none. Its statement
   lives in its leaf.
 - **Leaf**: one option (`Option: {name} — {description}`), one level (`Level: {description}`) or one statement
   (`Statement: … Yes means: … No means: …`), followed by the query token.
@@ -174,8 +174,8 @@ LoRA moves the judgement "how well does this option fit this state" into the hid
 chat model's state there was never trained to encode it. How much LoRA adds over a scorer trained on the frozen backbone
 alone (P1, [chapter 9](09-fine-tuning-for-your-task.md), section 9.4) depends on the task and the backbone. On E4B it
 raised Civil Comments AUROC from 0.875–0.884 to 0.954 but moved Banking77 accuracy only from 0.887–0.900 to 0.902 (both
-measures are defined in chapter 11). On 26B A4B it raised agreement with human coders on the coding study from κ 0.699
-to 0.805.
+measures are defined in chapter 11). On 26B A4B it raised agreement with human coders on the coding study (Cohen's κ,
+agreement corrected for chance, section 11.6) from κ 0.699 to 0.805.
 
 ## 6.7 Losses
 
@@ -219,10 +219,10 @@ This is tested at two levels:
 - **in the test suite** (`tests/test_system_one.py`, `tests/test_invariance.py`), on a tiny random Gemma 4 in fp32:
   adding and removing questions, shuffling options, renaming question ids, and packing another request first must not
   change the answers;
-- **on a trained bundle and the real backbone**, with `scripts/check_invariance.py`. It reports, for each question
-  type and packing change (options reversed for Choice, another request packed first, one more question): the largest change in any probability,
-  answer flips, rank stability of the top probability, and churn in the least confident 20% of answers. It also runs
-  the identical pass twice, as a determinism check.
+- **on a trained bundle and the real backbone**, with `scripts/check_invariance.py`. It reports, for each question type
+  and packing change (options reversed for Choice, another request packed first, one more question): the largest change
+  in any probability, answer flips, rank stability of the top probability, and churn in the least confident 20% of
+  answers. It also runs the identical pass twice, as a determinism check.
 
 ## 6.9 Backbones
 
@@ -250,13 +250,14 @@ from decisivelm.model import load_backbone
 backbone, tokenizer = load_backbone("26b-a4b", dtype=torch.float32)
 ```
 
-This keeps the checkpoint's bf16 weights (about 58 GB of GPU memory) and runs every matrix multiplication in fp32
-(`decisivelm.model.fp32_compute`). The released checkpoint is itself bf16, so converting its weights to fp32 loses
-nothing, and the answers equal those of a full fp32 copy of the model, which would need about 104 GB. Use it wherever
-answers must not depend on what else is in a batch, and measure the remaining effect on your own bundle with
-`scripts/check_invariance.py`. E4B is a dense model and is less sensitive to this. In bf16, repacking flipped 3–4.5%
-of its answers, against 19–22% on 26B A4B (`results/M0.md`). For this reason the published 26B A4B general head is
-trained, checked and served in float32, and its bundle sets that when loaded.
+This keeps the checkpoint's bf16 weights (about 58 GB of GPU memory once loaded, within the 72 GB free that chapter 2
+asks for) and runs every matrix multiplication in fp32 (`decisivelm.model.fp32_compute`). The released checkpoint is
+itself bf16, so converting its weights to fp32 for each multiplication loses nothing, and the answers equal those of a
+full fp32 copy of the model, which would need about 104 GB. Use it wherever answers must not depend on what else is in a
+batch, and measure the remaining effect on your own bundle with `scripts/check_invariance.py`. E4B is a dense model and
+is less sensitive to this. In bf16, repacking flipped 3–4.5% of its answers, against 19–22% on 26B A4B
+(`results/M0.md`). For this reason the published 26B A4B general head is trained, checked and served in float32, and its
+bundle sets that when loaded.
 
 ## 6.10 Images
 

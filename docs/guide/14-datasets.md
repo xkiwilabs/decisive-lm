@@ -19,7 +19,7 @@ A source may be placed in a *more* restrictive tier than its licence implies, wi
 but never a less restrictive one. Rows derived from other rows inherit the most restrictive tier of their inputs. The
 general head trains on R-tier rows only.
 
-A dataset whose authors state no licence and no terms restricting its use is tier R, with licence `NOASSERTION`; the
+A dataset whose authors state no licence and no terms restricting its use is tier R, with licence `NOASSERTION`. The
 model card lists it as "no licence available". Only data whose licence or terms clearly forbid the use is excluded. Two
 development benchmarks with no stated licence, AG News and SST-2, are nonetheless placed in tier X by an `override`
 (14.3).
@@ -47,9 +47,9 @@ Human-labelled datasets the general head trains on (their `train` splits only). 
 | Civil Comments (Borkan et al. 2019) | [google/civil_comments](https://huggingface.co/datasets/google/civil_comments) | CC0 1.0 | R | Public comments; seven Nouls whose targets are the share of raters marking each toxicity attribute |
 | GoEmotions (Demszky et al. 2020) | [google-research-datasets/go_emotions](https://huggingface.co/datasets/google-research-datasets/go_emotions) | Apache-2.0 | R | 58k Reddit comments rated by 3–5 raters; emotion Nouls (27 emotions plus neutral) and a four-way sentiment Choice (positive, negative, ambiguous, neutral) |
 | LEDGAR (Tuggener et al. 2020; LexGLUE, Chalkidis et al. 2022) | [coastalcph/lex_glue](https://huggingface.co/datasets/coastalcph/lex_glue), `ledgar` | CC BY 4.0 | R | 80k contract provisions from SEC filings; one Choice over 100 provision types |
-| HelpSteer2-Preference (Wang et al. 2025) | [nvidia/HelpSteer2](https://huggingface.co/datasets/nvidia/HelpSteer2), `preference` | CC BY 4.0 | R | Trained on from 0.2. The released head did not train on it. Two responses to one HelpSteer2 prompt; one Score over six levels, which response is better and by how much, with targets from the shares of all the pair's individual ratings. Each pair also appears with the responses swapped. Splits follow HelpSteer2's, by prompt. It is the same task as the suite's HelpSteer3, so from 0.2 HelpSteer3 is reported as a seen task |
+| HelpSteer2-Preference (Wang et al. 2025) | [nvidia/HelpSteer2](https://huggingface.co/datasets/nvidia/HelpSteer2), `preference` | CC BY 4.0 | R | Trained on from 0.2. Neither released head trained on it. Two responses to one HelpSteer2 prompt; one Score over six levels, which response is better and by how much, with targets from the shares of all the pair's individual ratings. Each pair also appears with the responses swapped. Splits follow HelpSteer2's, by prompt. It is the same task as the suite's HelpSteer3, so from 0.2 HelpSteer3 is reported as a seen task |
 
-LEDGAR's licence is as distributed in LexGLUE; the provisions themselves are public SEC EDGAR filings.
+LEDGAR's licence is as distributed in LexGLUE. The provisions themselves are public SEC EDGAR filings.
 
 **Generated rows.** Question sets and states written by Gemma 4 26B A4B (`scripts/synth_generate.py`, chapter 13) are
 registered as `synth_gemma4`. They are Apache-2.0 and R tier, because Gemma 4 places no terms on its outputs. Fan-out
@@ -88,22 +88,22 @@ X-tier sets are used for evaluation only and are never redistributed.
 
 ### Image and audio examples
 
-Public multi-rater sets for the fine-tune examples of [chapter 9](09-fine-tuning-for-your-task.md) (section 9.9).
-None is in the general head's training mix. Each is fetched from its authors' pinned files and converted locally;
-the media stay under `data/raw/` and are never redistributed.
+Public multi-rater sets for the fine-tune examples of [chapter 9](09-fine-tuning-for-your-task.md) (section 9.9). None
+is in the general head's training mix. Each is fetched from its authors' pinned files and converted locally. The media
+stay under `data/raw/` and are never redistributed.
 
 | Dataset | Source | Licence | Tier | Becomes |
 |---|---|---|---|---|
 | KonIQ-10k (Hosu et al. 2020) | [OSF mirror](https://osf.io/hcsdy/); rating counts from [subpic/koniq](https://github.com/subpic/koniq) | database: no licence stated ("freely available to the research community"); the photos are Flickr images under their own licences; rating file MIT | X | 10,073 photos at 1024×768; one Score on technical quality over 5 levels; targets from about 107 raters per photo; the authors' split |
 | CREMA-D (Cao et al. 2014) | [CheyneyComputerScience/CREMA-D](https://github.com/CheyneyComputerScience/CREMA-D) | ODbL 1.0 (contents under the Database Contents License) | S | 7,442 clips; one Choice over 6 emotions; targets from about 10 listeners per clip who heard it without the video; splits by actor. The actors' demographics file is never read |
-| THINGSplus (Hebart et al. 2019; Stoinski, Perkuhn & Hebart 2024) | [OSF project jum2f](https://osf.io/jum2f/) | ratings CC BY 4.0; photos CC0 | R | 1,845 objects, each with one public-domain photo; one Score on agreement that it is "something that lives", 7 levels; targets from about 37 raters per object; splits by object. Only the CC0 photos are used, never the password-protected THINGS image set; the raters' age and gender are never read |
+| THINGSplus (Hebart et al. 2019; Stoinski, Perkuhn & Hebart 2024) | [OSF project jum2f](https://osf.io/jum2f/) | ratings CC BY 4.0; photos CC0 | R | 1,845 objects, each with one public-domain photo; one Score on agreement that it is "something that lives", 7 levels; targets from about 37 raters per object; splits by object. Only the CC0 photos are used, never the password-protected THINGS image set. The raters' age and gender are never read |
 
 ### Zero-shot image check
 
 One more multi-rater image set is held out from every mix and from every fine-tune example. It checks whether the
 general head's confidence follows human disagreement on a kind of image it was not trained on. Both released heads were
 trained only on VizWiz-VQA's photo questions. The E4B head was checked on this set
-(`results/cifar10h_v5c_zero_shot.md`) and the 26B A4B head has not been; an earlier head, trained on text only, was
+(`results/cifar10h_v5c_zero_shot.md`), and the 26B A4B head has not been. An earlier head, trained on text only, was
 checked the same way (`results/cifar10h_v3d_zero_shot.md`).
 
 | Dataset | Source | Licence | Tier | Becomes |
@@ -114,25 +114,25 @@ checked the same way (`results/cifar10h_v3d_zero_shot.md`).
 
 Version 1.0 adds more images and audio to the general head. Three multi-rater sets are its training data, and two more
 are frozen as its image and audio suites, held out of every mix and every user adapter (`configs/holdout.yaml`) before
-any image or audio training. The first release already trains on 10,000 of VizWiz-VQA's training photos (General v5c,
-[chapter 13](13-how-the-general-head-was-trained.md)), and on none of the audio. As with every source, the media stay
-under `data/raw/` and are never redistributed.
+any image or audio training. Both heads of the first release already train on 10,000 of VizWiz-VQA's training photos
+(the General v5c mix, [chapter 13](13-how-the-general-head-was-trained.md)), and on none of the audio. As with every
+source, the media stay under `data/raw/` and are never redistributed.
 
 | Dataset | Source | Licence | Tier | Becomes |
 |---|---|---|---|---|
-| VizWiz-VQA (Gurari et al. 2018) | [vizwiz.org](https://vizwiz.org/tasks-and-datasets/vqa/) | CC BY 4.0 | R | 24,842 photos taken by blind people, each with the question they asked; a Noul, whether the photo shows enough to answer, from the share of ten answerers who gave an answer; and, for 20,818 of them, the answer as a Choice. The train annotations become `train` and `val`, the validation annotations `gold_calib` and `gold_test`; the test split has no public answers and is not used |
+| VizWiz-VQA (Gurari et al. 2018) | [vizwiz.org](https://vizwiz.org/tasks-and-datasets/vqa/) | CC BY 4.0 | R | 24,842 photos taken by blind people, each with the question they asked; a Noul, whether the photo shows enough to answer, from the share of ten answerers who gave an answer; and, for 20,818 of them, the answer as a Choice. The train annotations become `train` and `val`, the validation annotations `gold_calib` and `gold_test`. The test split has no public answers and is not used |
 | SONYC-UST v2 (Cartwright et al. 2020) | [Zenodo 3966543](https://zenodo.org/records/3966543) | CC BY 4.0 | R | 18,510 ten-second recordings from New York City street sensors; eight Nouls, one per kind of sound (engine, impact machinery, other impacts, powered saw, alert signal, music, human voice, dog), from three volunteers per clip. The SONYC team's own labels and the sensor's location and recording time are never used. SONYC's own splits, with its 2019 test recordings split by sensor into `gold_calib` and `gold_test` |
 | Emozionalmente (Catania et al.) | [Zenodo 6569824](https://zenodo.org/records/6569824) | CC BY 4.0 | R | 6,902 clips of Italian actors; one Choice over seven emotions, from the listeners (about five per clip) who said which emotion they heard. Splits by actor. The listeners' demographics file is never read |
 | TextVQA (Singh et al. 2019), frozen suite | [textvqa.org](https://textvqa.org) | annotations CC BY 4.0; the photos are Open Images, listed as CC BY 2.0 but not warranted per photo | X | The validation questions only: 4,985 questions on 3,161 photos that need reading the text in the photo; the answer as a Choice from ten answerers; split by photo into `gold_calib` (40%) and `gold_test` (60%) |
-| ODAQ (Torcoli et al. 2024), frozen suite | [Zenodo 10405774](https://zenodo.org/records/10405774) | the scores CC BY 4.0; each recording under its own licence | X | 136 conditions of 17 excerpts: an original and a processed version (a codec, a band limit or source separation, or the original again, hidden), with one Score on how good the processed version sounds, over MUSHRA's five bands, from 26 expert listeners. Only excerpts whose audio is CC BY or CC0 are used; the 13 CC BY-NC excerpts are left out. Split by excerpt |
+| ODAQ (Torcoli et al. 2024), frozen suite | [Zenodo 10405774](https://zenodo.org/records/10405774) | the scores CC BY 4.0; each recording under its own licence | X | 136 conditions of 17 excerpts: an original and a processed version (a codec, a band limit or source separation, or the original again, hidden), with one Score on how good the processed version sounds, over MUSHRA's five bands, from 26 expert listeners. Only excerpts whose audio is CC BY or CC0 are used. The 13 CC BY-NC excerpts are left out. Split by excerpt |
 
-The photo question-answering sets have free-text answers. Each question becomes a Choice with a fixed number of
-options: the four answers given most often (two, yes and no, for a yes/no question), filled up when fewer with answers
-to other questions that no answerer gave here. A fixed count keeps the number of options from telling the head how
-much the answerers disagreed. Answers are compared after light normalisation, so "Dakota." and "dakota" are one
-answer, but "dakota" and "dakota digital" stay two, and the head learns to split its confidence between them as the
-answerers did. A question is left out when its four options cover fewer than half of the answerers who gave an answer
-(`decisivelm/data/converters/vqa.py`).
+The photo question-answering sets have free-text answers. Each question becomes a Choice with a fixed number of options:
+the four answers given most often (two, yes and no, for a yes/no question). When a question has fewer than four
+different answers, the remaining options are answers to other questions, chosen from those no answerer gave to this one.
+A fixed count keeps the number of options from telling the head how much the answerers disagreed. Answers are compared
+after light normalisation, so "Dakota." and "dakota" are one answer, but "dakota" and "dakota digital" stay two, and the
+head learns to split its confidence between them as the answerers did. A question is left out when its four options
+cover fewer than half of the answerers who gave an answer (`decisivelm/data/converters/vqa.py`).
 
 ## 14.4 The frozen held-out suite
 
@@ -167,9 +167,11 @@ overlaps when at least half of its 8-grams occur in a training file. A training 
 8-grams occur in a suite set, which catches a short training text copied into a long suite state (a LEDGAR provision
 inside a CUAD section, for example). Suite rows found in either direction are listed in `configs/suite_exclusions.txt`
 and left out by the converters. Of the 641 rows left out, 582 are CUAD sections, most of them sharing text with LEDGAR
-provisions (`results/suite_overlap.md`). The audit was run again before the released head was scored, with three more
-trainable sources (`synth_v4`, VizWiz-VQA and HelpSteer2-Preference), and found no overlap with anything the released
-head trains on (`results/suite_overlap_v5c.md`).
+provisions (`results/suite_overlap.md`). The audit was run again before the two released heads were scored, with three
+more trainable sources (`synth_v4`, the version 4 teacher-written rows of chapter 13, VizWiz-VQA and
+HelpSteer2-Preference), and found no overlap with anything they train on (`results/suite_overlap_v5c.md`). It found one
+HelpSteer3 row that overlaps HelpSteer2-Preference, which version 0.2 trains on. That row was added to the exclusions on
+2026-11-05, after both 0.1 heads were scored.
 
 **The new-task development set.** MultiNLI is also held out of the general head, for a different purpose: it shows how
 the head behaves on a task it has not seen, asked three ways. It was also where an earlier candidate's new-task
@@ -185,12 +187,12 @@ suite and is not a release gate, but it is never trained on by the general head 
 - Splits are assigned by premise text, because several hypotheses share one premise. Training pairs whose premise
   appears in the matched development set are dropped.
 - The archive is served from a university page rather than a commit, so it is pinned by its SHA-256.
-- A user adapter may train on MultiNLI's `train` rows; only the general head holds it out.
+- A user adapter may train on MultiNLI's `train` rows. Only the general head holds it out.
 
 ### Development sets for rating scales and other languages
 
 Five more human-labelled sets check candidates during development. None is part of the suite or a release gate, and
-the released head (General v5c) trained on none of them.
+neither released head (both trained on the General v5c mix) trained on any of them.
 
 - **Wikipedia Talk toxicity** checks review readiness on a two-sided social scale rated by many people. It was added
   after General v3d failed criterion 1 on Measuring Hate Speech's Scores (chapter 15), and it is held out of the
@@ -294,21 +296,22 @@ Before publishing, each release checks and records on the dataset card that:
 Most datasets here are CC BY, which requires credit. When you publish anything derived from them (fan-out rows, model
 weights trained on them, results tables), cite the dataset authors listed above, link the source and the licence, and
 say what was changed. Fan-out rows written about a seed's state keep that seed's licence and are credited to it in the
-published dataset card. CLINC150 is CC BY 3.0 and Civil Comments is CC0, which asks for no attribution, though citing
-it is good practice. MultiNLI's texts come from the Open American National Corpus, which places no restrictions on
-use; cite Williams, Nangia and Bowman (2018) and link the corpus page.
+published dataset card. CLINC150 is CC BY 3.0 and Civil Comments is CC0, which asks for no attribution, though citing it
+is good practice. MultiNLI's texts come from the Open American National Corpus, which places no restrictions on use.
+Cite Williams, Nangia and Bowman (2018) and link the corpus page.
 
 THINGSplus ratings are CC BY 4.0: cite Hebart et al. (2019, PLoS ONE) and Stoinski, Perkuhn and Hebart (2024,
 Behavior Research Methods). CREMA-D is under the ODbL: cite Cao et al. (2014, IEEE Transactions on Affective
 Computing), and anything built from it as a database must be shared alike. CIFAR-10H is CC BY-NC-SA 4.0: cite
 Peterson, Battleday, Griffiths and Russakovsky (2019, ICCV) and, for the images, Krizhevsky (2009).
 
-The parts of the version 1.0 sets that are used are CC BY 4.0. Cite Gurari et al. (2018, CVPR) for VizWiz-VQA,
-Cartwright et al. (2020, DCASE) for SONYC-UST, Catania et al. (the Zenodo record) for Emozionalmente, Singh et al.
-(2019, CVPR) for TextVQA and Torcoli et al. (2024, ICASSP) for ODAQ. ODAQ's recordings carry their own credits, listed
-per file in the dataset's `_detailed_license.csv`.
+The annotations and scores of the version 1.0 sets are CC BY 4.0, and so are the photos and recordings of VizWiz-VQA,
+SONYC-UST and Emozionalmente. Cite Gurari et al. (2018, CVPR) for VizWiz-VQA, Cartwright et al. (2020, DCASE) for
+SONYC-UST, Catania et al. (the Zenodo record) for Emozionalmente, Singh et al. (2019, CVPR) for TextVQA and Torcoli et
+al. (2024, ICASSP) for ODAQ. TextVQA's photos come from Open Images, listed as CC BY 2.0 but not warranted per photo.
+ODAQ's recordings carry their own credits, listed per file in the dataset's `_detailed_license.csv`.
 
-The development benchmarks reuse item samples and question wording from the jevbench harness, which is MIT-licensed;
-its copyright and permission notice is reproduced in the repository's `NOTICE` file.
+The development benchmarks reuse item samples and question wording from the jevbench harness, which is MIT-licensed. Its
+copyright and permission notice is reproduced in the repository's `NOTICE` file.
 
 Next: [15. Release criteria](15-release-criteria.md)

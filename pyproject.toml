@@ -1,6 +1,6 @@
 [project]
 name = "decisive-lm"
-version = "0.0.1"
+version = "0.1.0"
 description = "Local, multimodal System One decision model on Gemma 4"
 license = "Apache-2.0"
 readme = "README.md"

@@ -55,7 +55,7 @@ organisations whose policies exclude such models.
 Each backbone in `configs/model.yaml` and each teacher in `configs/teachers.yaml` records its developer and base-model
 origin next to its licence. The code loads a backbone or teacher only if both are in `approved_origins` at the top of
 `configs/model.yaml` (`decisivelm.model.check_origin`, tested in `tests/test_model_origin.py`), so a model of unchecked
-origin fails at load time. Adding a model means filling in those fields and checking them against the rule; adding an
+origin fails at load time. Adding a model means filling in those fields and checking them against the rule. Adding an
 organisation to `approved_origins` means checking the organisation.
 
 Datasets are governed by their licences (16.3), not by this rule. A public, human-rated dataset may contain text that
@@ -67,8 +67,8 @@ other models wrote. It is used as data, and its models are never run.
 |---|---|
 | DecisiveLM code | Apache-2.0 (`LICENSE`) |
 | Published adapter weights (the two general heads) | Apache-2.0 |
-| Gemma 4 weights | Released by Google under Apache-2.0, as recorded in `configs/model.yaml`; check the model card of the revision you use |
-| Teacher-written rows | Apache-2.0: Gemma 4 places no terms on its outputs |
+| Gemma 4 weights | Released by Google under Apache-2.0, as recorded in `configs/model.yaml`. Check the model card of the revision you use |
+| Teacher-written rows | Apache-2.0, because Gemma 4 places no terms on its outputs |
 | Public datasets | Each its own (chapter 14): CC BY 4.0, CC BY 3.0, CC0 1.0 and Apache-2.0 for training data; evaluation-only sets as listed |
 
 **Licence tiers** decide where a row may be used (14.1):
@@ -144,17 +144,17 @@ infer protected attributes such as age, gender, ethnicity or health from text, f
 - **Isolated options.** A Choice option is judged without seeing its siblings, so an `other` option needs a
   self-contained description (chapter 5).
 - **Option limit.** Choice is limited to 255 options.
-- **Languages.** The training data is mostly English. On the held-out suite's 60-intent task in ten languages the
-  head was not trained on, the E4B head's accuracy is 0.672 (P0 0.658; the 26B A4B head's is 0.680 against 0.731 for
-  its P0), and the E4B head's calibration needs the per-task step (expected calibration error 0.094 zero-shot and
-  0.018 after it, chapter 15). The same task is not scored in English, so how
-  these languages compare with English is not measured.
-- **Images and audio.** Of images, the general head was trained only on VizWiz-VQA's photo questions, and it has been
-  checked zero-shot on one other image set (CIFAR-10H, model card). It was not trained on audio. Image and audio tasks
-  need calibration or a fine-tune on your own labelled examples (chapter 10, section 10.6, and chapter 9, section 9.9),
-  and audio needs the E4B backbone (the 26B A4B general head takes text and images only).
+- **Languages.** The training data is mostly English. On the held-out suite's 60-intent task in ten languages the head
+  was not trained on, the E4B head's accuracy is 0.672 (its P0 0.658) and the 26B A4B head's is 0.680 (its P0 0.731).
+  The E4B head's calibration needs the per-task step (expected calibration error 0.094 zero-shot and 0.018 after it,
+  chapter 15). The same task is not scored in English, so how these languages compare with English is not measured.
+- **Images and audio.** Of images, both general heads were trained only on VizWiz-VQA's photo questions, and the E4B
+  head has been checked zero-shot on one other image set (CIFAR-10H, model card). Neither was trained on audio. Image
+  and audio tasks need calibration or a fine-tune on your own labelled examples (chapter 10, section 10.6, and chapter
+  9, section 9.9), and audio needs the E4B backbone (the 26B A4B general head takes text and images only).
 
-Check the model card for measured performance and failure modes before relying on it.
+Check the model card of the head you use ([E4B](../model-card.md), [26B A4B](../model-card-26b.md)) for measured
+performance and failure modes before relying on it.
 
 **Human review.** Calibrated confidence makes review cheaper, not unnecessary. Choose a review threshold on your own
 human-labelled data (chapter 11), and keep checking a sample of confident answers too.

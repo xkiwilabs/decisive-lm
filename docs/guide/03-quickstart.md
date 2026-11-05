@@ -1,13 +1,13 @@
 # 3. Quickstart
 
 This chapter takes you from an installed toolkit to your first answers: download the general head, load it onto Gemma 4
-E4B (the default; the 26B A4B head loads the same way, section 3.1), send a request from Python, and read the
+E4B (the default, and the 26B A4B head loads the same way, section 3.1), send a request from Python, and read the
 response. It ends with running a head over a whole file of requests. It assumes the installation of chapter 2.
 
 ## 3.1 Download the general head
 
-There are two general heads: `decisivelm-e4b-general` for Gemma 4 E4B, and `decisivelm-26b-a4b-general` for Gemma 4
-26B A4B. This chapter uses the E4B head, which runs on a 24 GB GPU and is the faster of the two; section 7.10 helps you
+There are two general heads: `decisivelm-e4b-general` for Gemma 4 E4B, and `decisivelm-26b-a4b-general` for Gemma 4 26B
+A4B. This chapter uses the E4B head, which runs on a 24 GB GPU and is the faster of the two. Section 7.10 helps you
 choose. Each head is published on Hugging Face as a bundle, a directory of three files:
 
 | File | Contents |
@@ -29,10 +29,11 @@ against the model card. A head you train yourself from the base model (section 9
 place of `bundles/decisivelm-e4b-general`.
 
 To use the 26B A4B head instead, download `xkiwilabs/decisivelm-26b-a4b-general` into
-`bundles/decisivelm-26b-a4b-general` and load that directory in the examples below. It has the same three files and
-the same calls. It computes in float32 (the bundle sets this), so it needs a GPU with about 72 GB free and takes about
-0.47 s for a 20-block request over HTTP, against about 0.10 s for the E4B head. It accepts text and images but not
-audio ([model card](../model-card-26b.md)).
+`bundles/decisivelm-26b-a4b-general` and load that directory in the examples below. It has the same three files and the
+same calls, except that `load_backbone` and `load_image_processor` take `"26b-a4b"` where the examples pass `"e4b"`. It
+computes in float32 (the bundle sets this), so it needs a GPU with about 72 GB free and takes about 0.47 s for a
+20-block request over HTTP, against about 0.10 s for the E4B head. It accepts text and images but not audio
+([model card](../model-card-26b.md)).
 
 ## 3.2 Load the model
 
@@ -113,7 +114,7 @@ shown purely as an illustration:
 - `choice` is the most probable option.
 - `confidence` is a 0–1 summary of how peaked the distribution is: 1 means all the probability is on one option, 0
   means it is spread evenly (section 3.6). It is not the chance that the answer is right. That chance is the top
-  probability, 0.96 here.
+  probability, 0.96 here, once the head is calibrated for the task (section 3.6).
 - `usage` reports the number of input tokens, the number of answer blocks (one per option here), the time taken, the
   confidence method and the head's name (its bundle directory). In Python the optional request field `model` is
   echoed back unchanged. Over HTTP it chooses the head that answers (section 4.10).
@@ -196,7 +197,7 @@ certain one gives 1: (n · p_max − 1) / (n − 1) for n options. Others are av
 | Method | Definition | Good for |
 |---|---|---|
 | `peak` | (n · p_max − 1) / (n − 1), clipped to [0, 1] | the default, and the formula of the published System One API (section 4.1) |
-| `entropy` | 1 − H(p) / log n | uses the whole distribution, not just the top option |
+| `entropy` | 1 − H(p) / log n | uses the whole distribution, not only the top option |
 | `margin` | p_top1 − p_top2 | separating close calls between two options |
 | `ordinal` | 1 − Var(level) / Var_max | Score questions: spreading over neighbouring levels costs less than over distant ones |
 
@@ -219,7 +220,7 @@ meaning. For a Noul, rank by `max(noul, 1 − noul)`. Chapter 7 explains how to 
 
 A request can carry up to four images in `media`, placed before the state text in the model's input. Of images, the
 general head was trained only on photo questions (VizWiz-VQA: photos that blind people took to ask a question about
-them), so on other kinds of image it answers zero-shot (see the end of this section). Give each image as a file path or
+them), so on any other image task it answers zero-shot (see the end of this section). Give each image as a file path or
 as base64 data:
 
 ```python
@@ -236,12 +237,13 @@ response = dlm.system_one({
 `dlm.image_processor = decisivelm.model.load_image_processor("e4b")` and `dlm.media_root`. Each image is encoded at a
 fixed budget of 280 image tokens. Image URLs are refused. Download the image and pass it as a path or as `data`.
 
-Zero-shot on one image set, CIFAR-10H (small photos of ten kinds of object, each labelled by about 51 people), the
+Zero-shot on one image set, CIFAR-10H (small photos of ten kinds of object, each labelled by about 51 people), the E4B
 general head was more accurate than the prompted base model (0.909 against 0.875), and its confidence was closer than
 the base model's to how much people agreed. Its raw probabilities on these images were too low (underconfident),
-however, until it was calibrated on the task ([model card](../model-card.md#zero-shot-on-other-images); section 7.6). It
-has not been evaluated on audio. For an image task of your own, calibrate the general head on about 100 of your labelled
-images (section 10.6) before you rely on its confidence, or train a fine-tune on them (chapter 9).
+however, until it was calibrated on the task ([model card](../model-card.md#zero-shot-on-other-images), and section
+7.6). The 26B A4B head has not been scored on another image set, and neither head has been evaluated on audio. For an
+image task of your own, calibrate the general head on about 100 of your labelled images (section 10.6) before you rely
+on its confidence, or train a fine-tune on them (chapter 9).
 
 ## 3.8 Running a head over a file
 
@@ -263,8 +265,8 @@ must be a single line in the file:
  "split": "gold_test"}
 ```
 
-The source dataset, here `my_requests`, must be registered in `configs/datasets.local.yaml` (section 8.8 shows an
-entry). Then run:
+The source dataset, here `my_requests`, must be registered: a public dataset in `configs/datasets.yaml`, and private
+data in the uncommitted `configs/datasets.local.yaml` (section 8.8 shows an entry). Then run:
 
 ```bash
 uv run python scripts/predict_bundle.py --bundle bundles/decisivelm-e4b-general \
@@ -276,7 +278,7 @@ uv run python scripts/predict_bundle.py --bundle bundles/decisivelm-e4b-general 
 | `--bundle` | required | the head's directory |
 | `--data` | required | one or more JSONL files of canonical rows |
 | `--splits` | `gold_test` | answer only the rows whose `split` is one of these |
-| `--max-tokens` | `4096` | tokens per packed batch; lower it if you run out of memory |
+| `--max-tokens` | `4096` | tokens per packed batch (lower it if you run out of memory) |
 | `--media-root` | the repository root | where relative media paths resolve |
 | `--image-budget` | 280 (the backbone profile's) | image tokens per image, for a head that records no budget of its own |
 
@@ -284,18 +286,17 @@ The script checks the head's backbone revision, packs several requests into each
 `data/predictions/<bundle name>__<data file stem>.jsonl`, one line per row:
 
 ```json
-{"id": "row-17", "split": "gold_test",
- "answers": {"department": {"type": "choice", "probabilities": {"billing": 0.01, "technical": 0.96, "sales": 0.03}},
-             "is_urgent": {"type": "noul", "p": 0.97}}}
+{"id": "req-1", "split": "gold_test",
+ "answers": {"department": {"type": "choice", "probabilities": {"billing": 0.93, "technical": 0.05, "sales": 0.02}}},
+ "probabilities": {"billing": 0.93, "technical": 0.05, "sales": 0.02}}
 ```
 
-Rows with a single Choice or Score question also carry its `probabilities` at the top level. The file is in the
-format the evaluation scripts read (chapter 11), not the response format. It holds probabilities only, with a Noul's
-under `p` and no `choice` or `confidence`. The answer is the most probable option, and its confidence follows from the
-probabilities as in section 3.6. The script runs the backbone in bf16 and answers rows with images or audio as well
-as text. For fp32, load the head with `DecisiveLM.load(..., dtype=torch.float32)` and call `system_one`. Every row's
-source dataset must be listed in `configs/datasets.yaml`, or for private data in the uncommitted
-`configs/datasets.local.yaml` (chapter 8).
+Rows with a single Choice or Score question also carry its `probabilities` at the top level. The file is in the format
+the evaluation scripts read (chapter 11), not the response format. It holds probabilities only, with a Noul's under `p`
+and no `choice` or `confidence`. The answer is the most probable option, and its confidence follows from the
+probabilities as in section 3.6. The script runs the backbone in the compute type the head records (bf16 for the E4B
+head, float32 for the 26B A4B head), and it answers rows with images or audio as well as text. To run the E4B head in
+float32, load it with `DecisiveLM.load(..., dtype=torch.float32)` and call `system_one`.
 
 ## 3.9 Where to go next
 

@@ -1,4 +1,3 @@
-[coord] held gpu1 as decisive-lm-57 (pid 2276403)
 Loading weights:   0%|          | 0/1013 [00:00<?, ?it/s]Loading weights:   3%|▎         | 26/1013 [00:00<00:05, 182.63it/s]Loading weights:   7%|▋         | 70/1013 [00:00<00:03, 264.88it/s]Loading weights:  11%|█         | 113/1013 [00:00<00:03, 293.88it/s]Loading weights:  15%|█▌        | 157/1013 [00:00<00:02, 290.86it/s]Loading weights:  18%|█▊        | 187/1013 [00:00<00:02, 283.96it/s]Loading weights:  22%|██▏       | 223/1013 [00:00<00:02, 277.96it/s]Loading weights:  26%|██▋       | 266/1013 [00:00<00:02, 291.51it/s]Loading weights:  31%|███       | 310/1013 [00:01<00:02, 308.47it/s]Loading weights:  35%|███▍      | 354/1013 [00:01<00:02, 320.06it/s]Loading weights:  39%|███▉      | 397/1013 [00:01<00:01, 324.78it/s]Loading weights:  44%|████▎     | 441/1013 [00:01<00:01, 331.47it/s]Loading weights:  48%|████▊     | 485/1013 [00:01<00:01, 336.41it/s]Loading weights:  52%|█████▏    | 528/1013 [00:01<00:01, 336.49it/s]Loading weights:  56%|█████▋    | 572/1013 [00:01<00:01, 340.00it/s]Loading weights:  61%|██████    | 616/1013 [00:01<00:01, 342.09it/s]Loading weights:  78%|███████▊  | 791/1013 [00:02<00:00, 697.49it/s]Loading weights: 100%|██████████| 1013/1013 [00:02<00:00, 483.76it/s]
 3384 rows, 33840 questions: answer agrees on 33823; max |Δp| = 5.57e-02; last latency 300.0 ms for 573 tokens, 46 blocks
 conformance: 100%
@@ -14,4 +13,3 @@ agreement with the written predictions (float32, tolerance 0.001): FAILS
   measuring_hate_speech-34213 status: answer changed although the written margin was 0.075
   measuring_hate_speech-34687 genocide: answer changed although the written margin was 0.010
   measuring_hate_speech-47798 dehumanize: answer changed although the written margin was 0.003
-[coord] released gpu1 (exit 1)

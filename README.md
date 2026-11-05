@@ -2,12 +2,12 @@
 
 **An open, local decision model on Gemma 4 that tells you which of its answers to check.**
 
-> **Status:** preview. The toolkit is usable, and the first two general heads, on Gemma 4 E4B and 26B A4B, are
-> published as a preview. Both were held to the release criteria in [chapter 15](docs/guide/15-release-criteria.md),
+> **Status:** version 0.1, a preview. The toolkit is usable, and the first two general heads, on Gemma 4 E4B and 26B
+> A4B, are published with it. Both were held to the release criteria in [chapter 15](docs/guide/15-release-criteria.md),
 > and each model card explains the checks its head misses against the same backbone prompted (P0). The
-> [E4B card](docs/model-card.md) lists three; the main one is review readiness no worse than P0's, on one task. The
-> [26B A4B card](docs/model-card-26b.md) lists five, against a much stronger P0; the main one is accuracy on intents
-> in ten languages, 5 points below P0's.
+> [E4B card](docs/model-card.md) lists three. The main one is review readiness no worse than P0's, on one task. The
+> [26B A4B card](docs/model-card-26b.md) lists five, against a much stronger P0. The main one is accuracy on intents in
+> ten languages, 5 points below P0's.
 
 DecisiveLM is a *System One* model, in psychology's sense of quick, intuitive judgement
 ([1.1](docs/guide/01-introduction.md#11-what-a-system-one-decision-model-is)). You give it a state — a message, a
@@ -94,15 +94,15 @@ main known shortfall is on two-sided social rating scales it was not trained on.
 poles through a neutral middle, for example "strongly respectful … neither … strongly disrespectful". On these scales
 its confidence is a worse guide to which answers to check than P0's. For such a task, use task calibration (guide 10.6),
 which fits a scale and an offset for each level on a few hundred of your own ratings, or fine-tune on them. It also
-misses two smaller calibration checks, which the model card describes. The 26B A4B head is more accurate than the
-E4B head on every suite task's primary metric, and on the hate-speech survey's rating scales its confidence ranks
-answers by rater agreement better than its P0's, the check the E4B head fails. Against its P0, the 26B A4B prompted,
-it is 5 points less accurate on intents in ten languages it was not trained on, and it misses four smaller checks
+misses two smaller calibration checks, which the model card describes. The 26B A4B head is more accurate than the E4B
+head on every suite task's primary metric, and on the hate-speech survey's rating scales its confidence ranks answers by
+rater agreement better than its P0's, the check the E4B head fails. Against its P0, the 26B A4B prompted, it is 5 points
+less accurate on intents in ten languages it was not trained on, and it misses four smaller checks
 ([its model card](docs/model-card-26b.md)). Of images, both heads are trained only on photo questions (VizWiz-VQA,
-photos taken by blind people to ask a question). Neither is trained on audio, and 26B A4B takes no audio input. Fine-tune
-examples on images and audio (photo quality, emotion in the voice, whether an object is alive) are in the guide
-([9.9](docs/guide/09-fine-tuning-for-your-task.md#99-images-and-audio)), and the model card's roadmap adds more images
-and audio to the general head in version 1.0.
+photos taken by blind people to ask a question). Neither is trained on audio, and 26B A4B takes no audio input.
+Fine-tune examples on images and audio (photo quality, emotion in the voice, whether an object is alive) are in the
+guide ([9.9](docs/guide/09-fine-tuning-for-your-task.md#99-images-and-audio)), and the model card's roadmap adds more
+images and audio to the general head in version 1.0.
 
 ## Getting started
 

@@ -11,6 +11,7 @@ Prediction rows: {"id", "split", "answers": {qid: {"type", "probabilities": {opt
 """
 import json
 import math
+import pathlib
 import warnings
 from dataclasses import dataclass
 
@@ -246,6 +247,8 @@ def invert(answer: dict, calib: Calibration, key: str | None = None) -> tuple[li
 
 
 def write_predictions(path, rows: list[dict]):
+    """One JSON row per line. Creates the folder: data/predictions/ is gitignored, so a fresh clone has none."""
+    pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         for r in rows:
             f.write(json.dumps(r) + "\n")

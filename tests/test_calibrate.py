@@ -1,11 +1,12 @@
 """Per-question calibration and predictions for every question type (docs/guide/10)."""
+import json
 import math
 
 import pytest
 import torch
 
 from decisivelm.calibrate import (QuestionLogits, fit_calibration, fit_new_task_scale, fit_task_calibration, predictions,
-                                  question_logits, scaled)
+                                  question_logits, scaled, write_predictions)
 from decisivelm.head import Calibration
 from test_train import ROWS
 
@@ -178,3 +179,10 @@ def test_too_few_calibration_questions_are_warned_about():
     with pytest.warns(UserWarning, match="only 30 choice questions") as caught:
         fit_calibration(qs)
     assert any("pooled temperature: choice:3-5 (30)" in str(w.message) for w in caught)
+
+
+def test_write_predictions_creates_its_folder(tmp_path):
+    # data/predictions/ is gitignored, so a fresh clone has none: the first prediction run must not fail at the end
+    out = tmp_path / "data" / "predictions" / "x.jsonl"
+    write_predictions(out, [{"id": "a", "p": 0.5}])
+    assert json.loads(out.read_text()) == {"id": "a", "p": 0.5}

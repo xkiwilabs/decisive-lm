@@ -2,16 +2,16 @@
 
 `general_v5c_26b-a4b_r8_seed0` is the second first-release candidate. It is trained on the same mix as the released E4B head (`general_v5c_e4b_r8_seed0`, `results/general_v5c_e4b.md`), with the same recipe, on Gemma 4 26B A4B (`google/gemma-4-26B-A4B-it@4d7ae498`). It uses rank-8 LoRA, bf16 weights and **float32 computation** in training, checks and serving (RELEASE.md, 2026-10-30: in bf16 the expert routing changes 19–22% of answers when only the packing changes). For this head, P0 is the 26B prompted, so P0 and the teacher are the same model.
 
-**Training** (`data/queues/general_v5c_26b.sh`, GPU1 alone, the hub down):
+**Training** (`scripts/train_p3.py`, on one RTX PRO 6000 with nothing else on it):
 - 215,433 training rows, 2 epochs at most (26,930 steps of 16 rows). Validation every 500 steps on 1,500 val rows (the E4B head's rows), patience 3.
 - Early stopping ended training at step 16,500. The bundle is the one selected by validation calibration loss, at step 15,000 (0.1982; best accuracy 92.5% at step 15,500).
 - Training took 101 h (6,072 min) at 1.38 s/row, from 31 October 06:39 to 4 November 12:04. Calibration and predictions for the three bundles (by calibration loss, loss and accuracy) took until 18:13.
-- Memory: 67.6 GB on the card in training (nvidia-smi, 4,096-token micro-batches); 55–60 GiB allocated by PyTorch in prediction.
+- Memory: 66.0 GiB (67,611 MiB) on the card in training (nvidia-smi, 4,096-token micro-batches); 55–60 GiB allocated by PyTorch in prediction.
 
 **How it was scored.**
 - The frozen suite once: `scripts/score_suite.py`, `results/suite_general_v5c_26b-a4b_r8_seed0.md`.
 - Development sets and benchmarks: `scripts/eval_dataset.py` (`results/release_v5c_26b/dev_<set>.md`) and `scripts/score_suite.py --sets bench_*` (`results/bench_general_v5c_26b.md`), on gold_test with 95% CIs from 1,000 item-level bootstrap resamples. Every head is raw, with no per-task step.
-- One slip in the run: the first queue started three suite sets before GPU1 was free. They ran out of memory and the suite was scored on MASSIVE alone (kept as `results/release_v5c_26b/suite_partial_massive_only.md`). The three sets were then predicted, and all four were scored together (`data/queues/release_v5c_26b_rest.sh`). No set was scored twice, and MASSIVE's numbers are identical in both files.
+- One slip in the run: three suite sets were started before the GPU they needed was free. They ran out of memory and the suite was scored on MASSIVE alone (kept as `results/release_v5c_26b/suite_partial_massive_only.md`). The three sets were then predicted, and all four were scored together. No set was scored twice, and MASSIVE's numbers are identical in both files.
 
 ## The frozen suite: fails five checks of 0.x
 
@@ -112,6 +112,5 @@ Primary metric, plus review readiness where items have several raters:
 ## Serving
 
 Through `decisivelm.serve` on one RTX PRO 6000 Blackwell Max-Q with nothing else on it, at the server's 12,288-token
-limit (`scripts/paper_v5c_26b/serve_measure.py`, 2026-11-05): 57.2 GB after loading and 68.6 GB at the peak
-(nvidia-smi), so `DECISIVELM_MEMORY_GB=72`; 473 ms p50 (p95 475 ms) over HTTP for a 1,185-token request with 20
+limit (`scripts/paper_v5c_26b/serve_measure.py`, 2026-11-05): 55.8 GiB (57,179 MiB) after loading and 67.0 GiB (68,593 MiB) at the peak (nvidia-smi), so `DECISIVELM_MEMORY_GB=72` (GiB); 473 ms p50 (p95 475 ms) over HTTP for a 1,185-token request with 20
 blocks, and 5.7–5.8 s for requests of about 12,000 tokens; audio refused with 400.

@@ -18,9 +18,9 @@ follow Alhasan, Diaz Monfort & Richardson, *Knowing which responses to check* (u
   for model selection only.
 - **Never choose on the test set.** Stopping rules, checkpoints, temperatures and prompts are chosen on `val` and
   `gold_calib`. A number from `gold_test` is reported, not optimised.
-- **Always against a baseline.** P0, the frozen backbone prompted per question ([chapter 9](09-fine-tuning-for-your-task.md)),
-  is the number to beat. A model **beats** a baseline when the primary metric improves and the paired 95% confidence
-  interval of the difference excludes zero.
+- **Always against a baseline.** P0, the frozen backbone prompted per question
+  ([chapter 9](09-fine-tuning-for-your-task.md)), is the number to beat. A model **beats** a baseline when the primary
+  metric improves and the paired 95% confidence interval of the difference excludes zero.
 - **Hard and soft labels.** Accuracy and calibration use **hard** labels: the raters' unique plurality, or for a Noul a
   yes-share of at least 0.5. Items where raters tie have no hard label and are left out of these metrics. Soft metrics
   and review readiness use the raters' **shares**.
@@ -151,9 +151,10 @@ Things to keep in mind:
 
 - A few hundred items give wide intervals. An ECE difference of 0.02 is rarely significant at that size.
 - The intervals cover the sampling of test items, not the randomness of training. Fine-tunes that differ only in
-  `--seed` can differ by more than an interval: three from the base model on the same 100 coding items reached
-  ρ(top p, agreement) of 0.44, 0.45 and 0.53 (`results/c8_general_v5c_e4b_r8_seed0.md`). Before choosing between two
-  training setups, train each with two or three seeds and compare their spread.
+  `--seed` can differ by more than an interval. Three fine-tunes from the base model, each trained on the same 100
+  coding items and scored on the same 792 test items, reached ρ(top p, agreement) of 0.44, 0.45 and 0.53
+  (`results/c8_general_v5c_e4b_r8_seed0.md`). Before choosing between two training setups, train each with two or three
+  seeds and compare their spread.
 - On items where raters tie, no answer is wrong. Those items are excluded from accuracy, not counted against the
   model.
 - A dataset that has been used to choose between models is a **development set**. Its numbers are reported as such,
@@ -235,12 +236,13 @@ For a sample of rows it compares every answer with the same answer under these v
 On the dense E4B backbone ([chapter 6](06-how-it-works.md), section 6.9) in bf16, rounding alone moved probabilities by
 about 0.03 on average and by up to 0.39 on one item, and 3–4 of 100 coding answers flipped when the options were
 reversed or another request was packed first. In fp32 every change was below 0.0002 and no answer flipped
-(`results/invariance.md`). On the released general head, over every request of the frozen suite, no probability moved by
-more than 0.02 ([model card](../model-card.md), criterion 5); on the 26B A4B general head, computed in float32, none
-moved by more than 0.011 ([model card](../model-card-26b.md)). On the 26B A4B mixture-of-experts backbone, bf16 rounding
-can also flip a token's choice of experts when the packing changes, which makes the movement about five times larger.
-`--dtype float32` shows how much of the movement is rounding. Where a single flipped answer matters, load the bundle in
-fp32 with `DecisiveLM.load(bundle, dtype=torch.float32)`. On Apple silicon this is about four times slower.
+(`results/invariance.md`). On the E4B general head, over every request of the frozen suite, no probability moved by more
+than 0.02 ([model card](../model-card.md), criterion 5). On the 26B A4B mixture-of-experts backbone, bf16 rounding can
+also flip a token's choice of experts when the packing changes, which makes the movement about five times larger than on
+E4B. The 26B A4B general head therefore computes in fp32, and none of its probabilities moved by more than 0.011
+([26B A4B model card](../model-card-26b.md)). `--dtype float32` shows how much of the movement is rounding. Where a
+single flipped answer matters, load the bundle in fp32 with `DecisiveLM.load(bundle, dtype=torch.float32)` (the 26B A4B
+general head does this when it loads). On Apple silicon this is about four times slower.
 
 `scripts/check_bundle.py` complements this. It confirms that a saved bundle, reloaded through `DecisiveLM.system_one`,
 reproduces the predictions written at training time for every question, and that every response conforms

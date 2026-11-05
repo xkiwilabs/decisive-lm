@@ -24,19 +24,19 @@ parameters for each token. The head is about 12M trained parameters (LoRA adapte
 tokens and a scorer network, see Summary) used with the base model, whose other weights are not retrained. Given a
 state (text, JSON or a photo with text) and a set of typed questions, it answers every question in one forward pass
 (one run of the model over the input, with no text generated), with a probability distribution over the options you
-supply. It is trained on the same data as the E4B head ([its card](model-card.md)), so the two can be compared row for
-row.
+supply. It is trained on the same data as the E4B head ([its
+card](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/model-card.md)), so the two can be compared row for row.
 
 **How it compares.** It is compared with Gemma 4 26B A4B without the head, prompted to answer the same questions
 (P0), which is also the model that labelled part of its training data.
-- **Against the E4B head**, it is better on the main measure of every held-out suite task. Its confidence is a much
-  better guide to which hate-speech survey answers to check (ρ 0.177 against 0.078).
+- **Against the E4B head**, it is better on the main measure of every held-out suite task. On the hate-speech survey
+  its confidence ranks answers by rater agreement much better (ρ 0.177 against 0.078), though a review of its least
+  confident 20% catches slightly fewer of its errors (23.4% against 24.5%).
 - **Against P0**, its confidence is the better guide to which answers to check on the hate-speech survey's ratings and
   on four of five held-out development sets. Its rating errors are smaller on the suite's two rating tasks.
 - **It is less accurate than P0** on intents in ten languages it was not trained on (68.0% against 73.1%), on four of
   seven public benchmarks (by 2–4 points), and on two rating sets (Wikipedia toxicity and Humicroedit).
-- **It is slower and larger than the E4B head**: about 0.47 s per request against 0.10 s, on a GPU with about 72 GB
-  free (Hardware, below).
+- **It is slower and larger than the E4B head**: about 0.47 s per request against 0.10 s, on a GPU with about 72 GiB free (Hardware, below).
 
 If you have a 24 GB GPU or need speed, use the E4B head.
 
@@ -46,9 +46,10 @@ If you have a 24 GB GPU or need speed, use the E4B head.
 - **Base model**: [google/gemma-4-26B-A4B-it](https://huggingface.co/google/gemma-4-26B-A4B-it) at revision
   `4d7ae4984b7db7de8f8457170b3f1a419ee76d52`, which this head requires
 
-> **Known limitations of this preview.** It fails five checks of the
-> [release criteria](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/RELEASE.md), and was released with them
-> stated (Evaluation, below). Each is a comparison with P0, a stronger model than the E4B head's P0:
+> **Known limitations of this preview.** It fails five checks of the [release
+> criteria](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/RELEASE.md), and was released with them stated
+> (Evaluation, below). Items 1–3 compare it with P0, a stronger model than the E4B head's P0; item 4 compares its
+> calibrated answers with its uncalibrated ones. Item 2 holds two of the five checks, which are counted per measure:
 >
 > 1. **Intents in languages it was not trained on** (MASSIVE): 68.0% right against 73.1%.
 > 2. **Which hate-speech survey answers to check.** Its confidence ranks answers by rater agreement better than P0's,
@@ -56,7 +57,7 @@ If you have a 24 GB GPU or need speed, use the E4B head.
 >    groups of that survey, its confidence runs against rater agreement more than P0's does (ρ −0.205 against −0.175).
 > 3. **The worst group of HelpSteer3**, a chatbot-response comparison task: ρ −0.038 against −0.011, both close to
 >    chance.
-> 4. **Calibrating on 100 items of the hate-speech survey's ratings** leaves their Brier score very slightly worse
+> 4. **Calibrating on 100 items of the hate-speech survey's ratings** leaves their Brier score slightly worse
 >    than before (0.6403 against 0.6399).
 >
 > On Humicroedit, a humour-rating set held out of training, it rates edited headlines as funnier than people do, and is
@@ -80,12 +81,13 @@ If you have a 24 GB GPU or need speed, use the E4B head.
 
 ## Intended use
 
-As for the E4B head ([its card](model-card.md#intended-use)): routing, triage and tagging; rubric scoring with a review
-step; coding qualitative data as a first coder whose confidence says which items a human should see; screening as
-yes/no statements; measuring a new task zero-shot; and questions about photos. Choose this head over the E4B head when
-a GPU with about 72 GB free is available and the extra review readiness matters more than speed. Check accuracy and
-the review threshold on a labelled sample of your own task before relying on the head
-([guide chapter 7](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/07-using-the-general-head.md)).
+As for the E4B head ([its card](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/model-card.md#intended-use)):
+routing, triage and tagging; rubric scoring with a review step; coding qualitative data as a first coder whose
+confidence says which items a human should see; screening as yes/no statements; measuring a new task zero-shot (with
+no training examples of it); and questions about photos. Choose this head over the E4B head when a GPU with about 72
+GiB free is available and the extra review readiness matters more than speed. Check accuracy and the review threshold
+on a labelled sample of your own task before relying on the head ([guide chapter
+7](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/07-using-the-general-head.md)).
 
 ## Out-of-scope use
 
@@ -94,10 +96,10 @@ the review threshold on a labelled sample of your own task before relying on the
 - Free-text generation, explanation or summarisation.
 - Choice questions with more than 255 options.
 - Audio. The server refuses it with a 400 error.
-- Images beyond photo questions without calibration on your task: it was trained on one photo task (VizWiz-VQA), and
-  has not been scored on any other image set.
+- Images beyond photo questions without calibration on your task, because it was trained on one photo task
+  (VizWiz-VQA) and has not been scored on any other image set.
 - Questions whose answer is not in the state.
-- Work that needs answers in about 0.1 s, or a GPU with less than about 72 GB free: use the E4B head.
+- Work that needs answers in about 0.1 s, or a GPU with less than about 72 GiB free. Use the E4B head for these.
 
 ## How to use
 
@@ -124,31 +126,32 @@ print(response["answers"])
 ```
 
 The head directory holds `adapter.pt` (LoRA weights and query-token embeddings), `scorer.pt` (the scorer network) and
-`calibration.json` (temperatures, Noul bias, backbone revision, the float32 setting and training settings). The
-server (`python -m decisivelm.serve`, guide §4.10) needs `DECISIVELM_MEMORY_GB=72`; one server holds heads of one
-backbone only.
+`calibration.json` (temperatures, Noul bias, backbone revision, the float32 setting and training settings). The server
+(`python -m decisivelm.serve`, guide §4.10) needs `DECISIVELM_MEMORY_GB=72` (the server's cap on its own GPU memory,
+in GiB). One server holds heads of one backbone only.
 
 ### Hardware
 
 | | Running the head | Fine-tuning it on your task |
 |---|---|---|
-| Hardware | Linux with an NVIDIA GPU (CUDA). It has not been run on Apple silicon | the same |
-| Memory | a GPU with about 72 GB free. Through the server, 57.2 GB after loading and 68.6 GB at the peak, on requests at its default limit of 12,288 tokens, with or without a photo | not yet measured for a user fine-tune (measured with criterion 8, below). Training this head on the general mix peaked at 67.6 GB with micro-batches of 4,096 tokens and gradient checkpointing |
-| Time | 0.47 s for a request of about 1,200 tokens with 20 options (four questions of five), batch 1, on one RTX PRO 6000 Blackwell Max-Q; 5.7–5.8 s for requests of about 12,000 tokens | 1.38 s per training row on the general mix |
+| Hardware | Linux with an NVIDIA GPU (CUDA), or a Mac with Apple silicon (MPS) and 96 GB or more of unified memory. On an M5 Max with 128 GB it held 56.0 GiB after loading and peaked at 58.6 GiB over 20 requests of up to 1,599 tokens, about 1.9 s per request (median, one at a time), and its answers matched the CUDA predictions within 0.002 with no answer changed (60 questions) | the same; fine-tune memory on a Mac not measured |
+| Memory | a GPU with about 72 GiB free. Through the server, 55.8 GiB after loading and 67.0 GiB at the peak, on requests at its default limit of 12,288 tokens, with or without a photo | not yet measured for a user fine-tune (measured with criterion 8, below). Training this head on the general mix peaked at 66.0 GiB with micro-batches of 4,096 tokens and gradient checkpointing |
+| Time | 0.47 s for a request of about 1,200 tokens with 20 options (four questions of five), batch 1, on one RTX PRO 6000 Blackwell Max-Q; 5.7–5.8 s for requests of about 12,000 tokens. The prompted 26B A4B, which reads each question once per option order, took 577–1,109 ms for the same request on vLLM (`results/p0_latency.md`) | 1.38 s per training row on the general mix |
 | Disk | about 49 GB for Gemma 4 26B A4B and about 1 GB for the Python environment | the same, plus your data |
 
 The peaks are per process, as `nvidia-smi` reports them, so they include the CUDA context. Float32 computation is the
-main cost: the bare backbone in bf16, with no head, took 0.14 s on the same request, and the E4B head takes 0.10 s.
+main cost. The bare backbone in bf16, with no head, took 0.14 s on the same request, and the E4B head takes 0.10 s.
 
 ## Training data
 
 The same mix as the E4B head, General v5c: 215,433 training requests (995,083 questions) from human-labelled public
 datasets, 10,000 VizWiz-VQA photos with questions, rewritten questions on the same states, and teacher-written
-question sets and states labelled by Gemma 4 26B A4B. Every source is release tier. The sources, licences and labels
-are listed on [the E4B head's card](model-card.md#training-data), and in
-[guide chapter 13](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/13-how-the-general-head-was-trained.md)
-and [chapter 14](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/14-datasets.md). The teacher is the
-same model as this head's backbone.
+question sets and states labelled by Gemma 4 26B A4B. Every source is in the release tier, whose licences allow
+redistribution (guide chapter 14). The sources, licences and labels are listed on [the E4B head's
+card](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/model-card.md#training-data), and in [guide chapter
+13](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/13-how-the-general-head-was-trained.md) and [chapter
+14](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/14-datasets.md). The teacher is the same model as
+this head's backbone.
 
 Splits are assigned per source item and question family before any rewriting, so no test item or its rewrites reach
 training. The frozen held-out suite (below) is listed in `configs/holdout.yaml`, and its text was checked for overlap
@@ -162,7 +165,7 @@ with every trainable row.
 | Adapter | LoRA rank 8, α 16, dropout 0.05, on the decoder's attention (q, k, v, o) and shared MLP (gate, up, down) projections only |
 | Query tokens | three reserved token ids (Choice, Score, Noul), their embedding rows trained |
 | Scorer | per-dimension standardisation (fitted on 2,000 training rows) → LayerNorm → Linear(2816, 1024) → GELU → Linear(1024, 1) |
-| Readout and losses | as for the E4B head ([its card](model-card.md#training-procedure)) |
+| Readout and losses | as for the E4B head ([its card](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/model-card.md#training-procedure)) |
 | Optimiser | learning rate 3e-5 for LoRA, 1e-4 for the head and query rows; 10% warm-up; 16 rows per step; packed micro-batches of up to 4,096 tokens with gradient checkpointing |
 | Selection | validation every 500 steps on the E4B head's 1,500 held-back rows; the checkpoint with the lowest calibrated validation loss is kept, and training stops after three checks without improvement (this release: step 15,000, stopped at 16,500 of at most 26,930, about 101 hours on one RTX PRO 6000 Blackwell Max-Q) |
 | Calibration | as for the E4B head: one temperature per question type and option-count bucket, and a Noul temperature and bias, fitted on the mix's human-labelled `gold_calib` rows |
@@ -170,12 +173,13 @@ with every trainable row.
 ## Evaluation
 
 The head is judged first on **review readiness**, whether its confidence says which answers to check, then on
-calibration and accuracy. **P0 here is Gemma 4 26B A4B prompted**, the head's own backbone ("better off than if
-they had prompted the base model it is built on"), and so also the teacher. This rule was written down before either
-head was trained (RELEASE.md, 2026-10-30). It makes this head's bar higher than the E4B head's, whose P0 is the
-prompted E4B. The criteria in force for this head were fixed before it was scored. It was released by a decision
-made after its result was seen (below). The measures are defined on [the E4B head's card](model-card.md#evaluation)
-and in guide chapters [10](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/10-calibration.md) and
+calibration and accuracy. **P0 here is Gemma 4 26B A4B prompted**, the head's own backbone ("better off than if they
+had prompted the base model it is built on"), and so also the teacher. This rule was written down before either head
+was trained (RELEASE.md, 2026-10-30). It makes this head's P0 a stronger model than the E4B head's, whose P0 is the
+prompted E4B. The criteria in force for this head were fixed before it was scored. It was released by a decision made
+after its result was seen (below). The measures are defined on [the E4B head's
+card](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/model-card.md#evaluation) and in guide chapters
+[10](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/10-calibration.md) and
 [11](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/11-evaluation.md).
 
 ### Frozen held-out suite
@@ -202,7 +206,7 @@ Release criteria (pass or fail, with paired bootstrap confidence intervals again
 | 2. Calibration after the per-task step: ECE ≤ 0.10 on every task, and Brier not significantly worse than before any calibration | ECE passes on every task (0.018–0.040). **Brier fails on Measuring Hate Speech's Scores**: 0.6403 calibrated against 0.6399 uncalibrated, Δ [+0.0002, +0.0006] |
 | 3. Accuracy not worse than P0 | **fails on MASSIVE**: 0.680 against 0.731, Δ [−0.055, −0.046]. Better on 3 of 5 tasks, level on CUAD |
 | 4. Close to the task-specific fine-tunes on the training datasets' own test sets | passes all 20 checks, review readiness included (table below) |
-| 5. Contract: conformance, independence and order | passes: conformance 100% on every suite item (41,642 requests). Reversing options, packing another request first or adding a question changes no answer and moves no probability by more than 0.011; an identical request reproduces exactly |
+| 5. Contract: conformance, independence and order | passes: conformance 100% on every suite item (41,642 requests). On 200 requests from each of two development sets, reversing options, packing another request first or adding a question changed no answer and moved no probability by more than 0.011, and an identical request reproduced exactly. Across the suite, answering each request alone rather than packed changed 36 of about 95,000 answers, 34 of them near-ties, by at most 0.056 (Limitations) |
 | 6. Provenance | passes: the same release-tier mix and manifest as the E4B head; Gemma 4 teacher and backbone; clean-room checks pass |
 | 7. Snapshot audit | passes: the same repository snapshot as the E4B head |
 | 8. A better starting point for fine-tunes (1.0; reported for 0.x) | not yet measured; scheduled for 7–8 November 2026, with the E4B head's recipe (coding study and MultiNLI, 100 and 300 items, three seeds) |
@@ -213,8 +217,8 @@ seen, and the criteria's change log records it
 
 ### Against the E4B head
 
-The two heads on the suite, each from its own suite report (not paired, so no intervals; this head is higher on
-every row):
+The two heads on the suite, each from its own suite report (not paired, so no intervals). This head is better on every
+row:
 
 | Task | Measure | This head | E4B head |
 |---|---|---|---|
@@ -228,7 +232,7 @@ every row):
 
 On Measuring Hate Speech's Scores, matched on the same 29,556 questions, its ρ is higher by +0.099 [+0.089, +0.110]
 and its tie AUROC by +0.047 [+0.038, +0.054]. The share of errors caught in review is slightly lower (Δ −0.011
-[−0.018, −0.004]). It fails more checks than the E4B head because its P0 is stronger: the prompted 26B is far more
+[−0.018, −0.004]). It fails more checks than the E4B head because its P0 is stronger. The prompted 26B is far more
 accurate on MASSIVE than the prompted E4B (0.731 against 0.658).
 
 ### Training datasets' own test sets
@@ -256,17 +260,17 @@ P0 is calibrated the same way as the head.
 | Set | What it shows | This head | P0 |
 |---|---|---|---|
 | VizWiz-VQA: photos by blind and low-vision people, 10 answerers each (trained on; scored on held-out photos) | photo questions | can the photo answer the question: AUROC 0.938; answer, 4 options: 73.1% right, ρ 0.676 | AUROC 0.802; 48.5%, ρ 0.367 |
-| Seven public benchmarks (AG News, Banking77, DailyDialog, emotion, financial topics, SST-2, tweet topics) | zero-shot classification | more accurate than P0 on 1 (Banking77, 81.8% against 76.7%), level on 2, less on 4 by 2–4 points; ECE 0.04–0.09 after 100 rows (0.06–0.30 zero-shot) | ECE 0.02–0.16 after 100 rows |
+| Seven public benchmarks (AG News, Banking77, DailyDialog, emotion, financial topics, SST-2, tweet topics) | classification, zero-shot except Banking77, whose training portion is in the mix | more accurate than P0 on 1 (Banking77, 81.8% against 76.7%), level on 2, less on 4 by 2–4 points; ECE 0.04–0.09 after 100 rows (0.06–0.30 zero-shot) | ECE 0.02–0.16 after 100 rows |
 | MultiNLI (5 annotators per pair; held out) | review readiness on a task outside the mix | ρ 0.365 (Choice), 0.347 (Score); errors caught 49.1% (Choice); accuracy 84.5% | ρ 0.321, 0.223; errors caught 50.2%; accuracy 85.6% |
 | Wikipedia toxicity (about 10 raters per comment; held out) | review readiness on an unseen two-sided social scale | ρ +0.002; tie AUROC 0.509; MAE 0.526 | ρ −0.162; tie AUROC 0.520; MAE 0.290 |
 | Sarcasm corpus (6 levels; held out) | the same, on sarcasm | ρ 0.231; MAE 0.830 | ρ 0.179; MAE 0.832 |
 | Humicroedit (4 levels; held out) | the same, on humour | ρ −0.032; MAE 0.845 | ρ +0.061; MAE 0.640 |
 
-- **Review readiness.** Its ρ is above P0's on four of the five held-out sets: the four in the table other than
+- **Review readiness.** Its ρ is above P0's on four of the five held-out sets: the three in the table other than
   Humicroedit, and Politeness (ρ +0.071 against −0.005). The paired intervals (`results/general_v5c_26b.md`) are
   significant on Wikipedia toxicity and both MultiNLI questions. On Humicroedit it is significantly worse.
 - **Wikipedia toxicity.** The E4B head's limitation there (its confidence a worse guide than its P0's) does not carry
-  over: this head's ρ is about 0, against the prompted 26B's −0.162. Its ratings are further from the raters' than
+  over. This head's ρ is about 0, against the prompted 26B's −0.162. Its ratings are further from the raters' than
   P0's (MAE 0.526 against 0.290), and it still puts far more probability on the two extreme levels than raters do.
 - **Humicroedit.** It rates edited headlines as funnier than the raters do (a mean predicted level of 1.75 against the
   raters' 0.96, the E4B head 1.35). Its ranking of the headlines is about the E4B head's.
@@ -283,29 +287,31 @@ P0 is calibrated the same way as the head.
 - **Humour.** On Humicroedit its ratings are too high and its confidence is no guide to agreement. A fine-tune or task
   calibration on your own ratings is the remedy, as for the E4B head on two-sided scales (its card).
 - **One training run.** This head was trained once. Two E4B runs that differ only in their seed differ on the text
-  development sets by up to 0.17 in ρ and 2–3 points of accuracy ([the E4B head's card](model-card.md#limitations-and-biases)),
-  so small differences between this head and others are not reliable. A second 26B run is planned when more GPUs
-  are available.
+  development sets by up to 0.17 in ρ and 2–3 points of accuracy ([the E4B head's
+  card](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/model-card.md#limitations-and-biases)), so small
+  differences between this head and others are not reliable. A second 26B run is planned when more GPUs are available.
 - **Near-tie answers depend on packing.** The mixture-of-experts backbone picks 8 of its 128 experts per token. Even
-  in float32, a request answered on its own and the same request packed with others can differ slightly. Against the
-  packed suite predictions, 36 of about 95,000 answers changed when each request was answered alone, 34 of them
-  near-ties (top two options within 0.026), with no probability moving by more than 0.056
-  (`results/release_v5c_26b/criterion5.md`).
-- **Speed and size.** 0.47 s per request and a GPU with about 72 GB free (Hardware, above). It has not been run on
-  Apple silicon.
+  in float32, a request answered on its own and the same request packed with others (answered in the same forward
+  pass) can differ slightly. Against the packed suite predictions, 36 of about 95,000 answers changed when each
+  request was answered alone, 34 of them near-ties (top two options within 0.026), with no probability moving by more
+  than 0.056 (`results/release_v5c_26b/criterion5.md`).
+- **Speed and size.** 0.47 s per request and a GPU with about 72 GiB free (Hardware, above), or about 1.9 s per
+  request on a Mac with 96 GB or more of unified memory.
 - **Calibration on a new task.** Calibrate on about 100 labelled items of your task before setting a review threshold
   (guide §10.6). On MASSIVE's 60 intents it was overconfident zero-shot (ECE 0.099, 0.031 after the step).
 - **One pass, no reasoning; inherited judgement; language; self-contained options.** As for the E4B head (its card).
-  Here the teacher and the backbone are the same model, so the head can share that model's blind spots more
-  directly.
+  Here the teacher and the backbone are the same model, so the head can share that model's systematic errors and
+  biases more directly.
 - **One image task, no audio.** Of images, it is trained only on VizWiz-VQA's photo questions, and it has not been
   scored on another image set. The backbone takes no audio.
 
 ## Roadmap
 
-The same as for the E4B head ([its card](model-card.md#roadmap)): 0.2 in mid to late November 2026 adds two-sided human
-ratings and the two same-task sources held back until the first release; 1.0 by the end of November 2026 adds images
-and audio with multi-rater labels and the stricter gates. Criterion 8 for this head is measured on 7–8 November 2026.
+The same as for the E4B head ([its
+card](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/model-card.md#roadmap)): 0.2 in mid to late November
+2026 adds two-sided human ratings and the two same-task sources held back until the first release, and 1.0 by the end
+of November 2026 adds images and audio with multi-rater labels and the stricter gates. Criterion 8 for this head is
+measured on 7–8 November 2026.
 
 ## Licence
 

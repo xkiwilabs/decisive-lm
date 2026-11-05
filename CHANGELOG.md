@@ -14,7 +14,7 @@ criteria for each version are in [docs/RELEASE.md](docs/RELEASE.md).
 - Task calibration of one question on about 100 of its own labelled items: a scale and an offset per option or level
   (`task_calibrate.py`, `decisivelm.calibrate.fit_task_calibration`; guide 10.6).
 - Image questions in the general head's training mix (VizWiz-VQA), and image and audio fine-tunes (guide 9.9).
-- Audio sent to a backbone without audio input (26B A4B) is refused with a message saying so; the server answers
+- Audio sent to a backbone without audio input (26B A4B) is refused with a message saying so, and the server answers
   400.
 - One HelpSteer3 row of the frozen suite (`helpsteer3-train-34503`) is excluded: its text overlaps a dataset the next
   release trains on (`configs/suite_exclusions.txt`; docs/RELEASE.md, change log 2026-11-05).

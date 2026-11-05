@@ -1,13 +1,13 @@
 # 17. Reference
 
-This chapter lists the scripts, configuration files, package modules and test groups in the repository, with one line
-on what each does. Use it to find the right tool; the chapters linked from each section explain them in full. Every
-script prints its full usage with `--help`, and its docstring at the top of the file gives worked examples.
+This chapter lists the scripts, configuration files, package modules and test groups in the repository, with one line on
+what each does. Use it to find the right tool. The chapters linked from each section explain them in full. Every script
+prints its full usage with `--help`, and its docstring at the top of the file gives worked examples.
 
 ## 17.1 Scripts
 
-Run every script from the repository root as `uv run python scripts/<name>.py …`. The flags listed are the ones you
-will usually set; `--help` lists all of them.
+Run every script from the repository root as `uv run python scripts/<name>.py …`. The flags listed are the ones you will
+usually set, and `--help` lists all of them.
 
 **Data**
 
@@ -26,7 +26,7 @@ will usually set; `--help` lists all of them.
 
 | Script | What it does | Key flags |
 |---|---|---|
-| `label_teacher.py` | Labels rows with a teacher on a vLLM server, resumably, then calibrates on `gold_calib` and writes predictions (12.7); `--local` runs the model on this machine and labels image and audio rows too (the media P0) | `--teacher`, `--data PATH[:N]`, `--splits`, `--chunk`, `--groups-in-parallel`, `--seed`, `--local`, `--media-root` |
+| `label_teacher.py` | Labels rows with a teacher on a vLLM server, resumably, then calibrates on `gold_calib` and writes predictions (12.7). With `--local` it runs the model on this machine and labels image and audio rows too (the media P0) | `--teacher`, `--data PATH[:N]`, `--splits`, `--chunk`, `--groups-in-parallel`, `--seed`, `--local`, `--media-root` |
 | `teacher_targets.py` | Replaces train-row targets with calibrated teacher targets (12.9) | `--data`, `--teacher`, `--splits`, `--calib`, `--balanced`, `--noul-bias`, `--set`, `--blend TEACHER=W`, `--out` |
 | `run_p0.py` | P0 baseline on a local backbone: prompt per question, read label log-probabilities, fit one temperature (12.8) | `--data`, `--backbone`, `--question`, `--splits`, `--chunk` |
 | `baseline_tfidf.py` | TF-IDF plus logistic-regression baseline for every question, on soft human targets (needs `uv run --with scikit-learn`) | `--data`, `--grid` |
@@ -47,7 +47,7 @@ will usually set; `--help` lists all of them.
 | `cache_features.py` | Caches the frozen backbone's query-token states once per row, for head-only training (P1); resumable | `--data`, `--out`, `--backbone`, `--save-every`, `--dtype`, `--fp32-router`, `--image-budget`, `--media-root` |
 | `train_p1.py` | Trains the scorer head only on cached features (P1), calibrates, writes a bundle | `--features`, `--data`, `--seed`, `--lr`, `--batch`, `--patience`, `--standardize`, `--max-train`, `--name` |
 | `train_p3.py` | Trains a LoRA adapter with query rows and head (a user adapter, or the general head with `--adapter general`), calibrates, writes a bundle and predictions (chapters 9 and 13) | `--data`, `--backbone`, `--adapter`, `--rank`, `--alpha`, `--epochs`, `--rows-per-step`, `--max-tokens`, `--lr-lora`, `--lr-head`, `--warmup-frac`, `--eval-every`, `--patience`, `--select`, `--predict-best`, `--limit-val`, `--standardize-rows`, `--init-head`, `--init-bundle` (fine-tune from a trained bundle such as the general head, 9.6), `--n-train`, `--limit-train`, `--seed`, `--dropout`, `--no-checkpointing`, `--dtype`, `--fp32-router`, `--image-budget` (image detail in soft tokens, 9.9), `--media-root`, `--name` |
-| `recalibrate.py` | Refits a trained run's calibration from its saved predictions, without the model; with `--new-task`, scales the Choice and Score temperatures on another task's `gold_calib` and writes a new bundle with that calibration (a development tool; the released head ships without such a scale, 10.6) | `--name`, `--suffix`, `--new-task STEM`, `--replace` |
+| `recalibrate.py` | Refits a trained run's calibration from its saved predictions, without the model; with `--new-task`, scales the Choice and Score temperatures on another task's `gold_calib` and writes a new bundle with that calibration (a development tool, and neither released head ships with such a scale, 10.6) | `--name`, `--suffix`, `--new-task STEM`, `--replace` |
 | `task_calibrate.py` | Task calibration of any method's predictions on a dataset: a scale and an offset per option or level for each question, fitted on its `gold_calib` rows; writes `<file>_task.jsonl` (10.6). With `--calib-rows N`, fits on a random N of those rows instead and writes `<file>_task_n<N>_s<seed>.jsonl` | `--data`, `--predictions PATH …`, `--calib-rows`, `--seed` |
 
 **Inference and checks**
@@ -73,14 +73,14 @@ will usually set; `--help` lists all of them.
 | `compare_coding.py` | Scores methods on a dataset coded by several human coders: κ against each coder, accuracy against consensus, and review readiness (11) | `--data`, `--codes`, `--predictions`, `--baselines`, `--reference`, `--question`, `--review`, `--n-boot`, `--seed`, `--out` |
 | `split_half.py` | How well half of each item's raters foretell the other half's agreement, over many random splits: split-half ρ, its Spearman-Brown full-panel estimate, and half A's top share as a confidence. A comparison for ρ(top p, agreement), not a ceiling (11) | `--data`, `--split`, `--question`, `--splits`, `--seed` |
 | `taskcal_report.py` | Task calibration of a bundle against P0 on rated development sets: the four rows (each with and without task calibration), the split-half figures, and fits on 100 and 300 `gold_calib` rows over 5 draws (10.6) | `--bundle`, `--data`, `--name`, `--out` |
-| `media_seed_report.py` | The image and audio examples' 300-item runs over three seeds, general minus base per seed, and photo quality at more image detail (9.9) | `--out` |
+| `media_seed_report.py` | The image and audio examples' 300-item runs over three seeds, general minus base per seed, and photo quality at more image detail (9.9) | `--general` (which head's runs: `general` = v3d, `generalv5c` = v5c), `--out` |
 | `score_suite.py` | Scores a release candidate against release criteria 1–4 on the frozen suite, once (15.4) | `--candidate`, `--calib-data`, `--sets`, `--n-boot`, `--seed`, `--seeds-only`, `--out` |
 | `score_c8.py` | Release criterion 8: fine-tunes from the general head against fine-tunes from base, per task and training size, on accuracy and review readiness (9.6) | `--general`, `--n-boot`, `--seed`, `--out` |
 
 ## 17.2 Configuration
 
 All configuration is YAML in `configs/`. Machine-specific paths (the Hugging Face cache, private data) go in the
-untracked `configs/local.yaml` and `configs/datasets.local.yaml`; scripts take data and output paths as flags, with
+untracked `configs/local.yaml` and `configs/datasets.local.yaml`. Scripts take data and output paths as flags, with
 defaults under the repository.
 
 | File | Contents |
@@ -158,7 +158,7 @@ through `scripts/m0_real.py`.
 | Variable | Use |
 |---|---|
 | `HF_HUB_CACHE` | Where Hugging Face weights and tokenizers are stored. Set it on a machine whose default cache belongs to another application, or use `hf_cache` in `configs/local.yaml` |
-| `HF_HUB_OFFLINE=1` | Load only what is already downloaded; a missing pinned revision fails instead of downloading |
+| `HF_HUB_OFFLINE=1` | Load only what is already downloaded. A missing pinned revision fails instead of downloading |
 | `CUDA_VISIBLE_DEVICES` | Choose the GPU(s) a script uses |
 | `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` | Reduces memory fragmentation in long training runs with varying sequence lengths |
 | `PYTHONUNBUFFERED=1` | Prints progress lines immediately, useful when a long job's output goes to a log file |
@@ -173,10 +173,10 @@ The server (`decisivelm.serve`, 4.10) reads only environment variables:
 | `DECISIVELM_PORT` | Default 8003 |
 | `DECISIVELM_DEVICE` | e.g. `cuda:0` (default: CUDA, else MPS, else CPU) |
 | `DECISIVELM_MEMORY_GB` | A hard cap on the process's GPU memory (CUDA), so an oversized request fails in this server, not in a neighbour |
-| `DECISIVELM_MAX_TOKENS` | The longest packed request accepted (default 12,288: a state at its 8,192-token budget plus about 4,000 tokens of questions); longer ones get `413` |
+| `DECISIVELM_MAX_TOKENS` | The longest packed request accepted (default 12,288: a state at its 8,192-token budget plus about 4,000 tokens of questions). Longer ones get `413` |
 | `DECISIVELM_AUTH` | `none` (default), `keys` or `litellm`. With `none`, the server refuses to bind anything but loopback unless `DECISIVELM_ALLOW_UNAUTHENTICATED=1` |
 | `DECISIVELM_API_KEYS` | Bearer tokens accepted with `keys`, joined by commas |
-| `DECISIVELM_LITELLM_URL` | With `litellm`, a token is accepted if this LiteLLM proxy accepts it; answers are cached for 5 minutes (refusals for 10 s) |
+| `DECISIVELM_LITELLM_URL` | With `litellm`, a token is accepted if this LiteLLM proxy accepts it. Answers are cached for 5 minutes (refusals for 10 s) |
 | `DECISIVELM_ALLOW_UNAUTHENTICATED` | `1` allows a non-loopback bind without auth, e.g. inside a container on a private network |
 
 ## 17.6 Repository layout

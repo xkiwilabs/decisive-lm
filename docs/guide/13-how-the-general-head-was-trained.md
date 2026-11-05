@@ -1,13 +1,13 @@
 # 13. How the general head was trained
 
-The general head is one adapter that answers unseen questions about unseen states with calibrated confidence. Release
-0.1 has two, one on Gemma 4 E4B and one on Gemma 4 26B A4B, trained on the same mix with the same recipe (section
-13.7 gives the differences); "the general head" in this chapter means the E4B head unless it says otherwise. It is
-trained with the same toolkit a user would use for their own task. Only the data differs: a broad mix of
-human-labelled public datasets from release-tier sources (permissive licences that allow commercial use and have no
-share-alike terms), schema variants derived from them, and question sets and states written and labelled by an open
-teacher. This chapter describes that recipe and gives the commands that rebuild it. Each release publishes its exact
-mix manifest (sources, licences, row counts and checksums), which is the authoritative record for that release.
+A general head is one adapter that answers unseen questions about unseen states with calibrated confidence. Release 0.1
+has two, one on Gemma 4 E4B and one on Gemma 4 26B A4B, trained on the same mix with the same recipe (section 13.7 gives
+the differences). In this chapter, "the general head" means the E4B head unless it says otherwise. It is trained with
+the same toolkit a user would use for their own task. Only the data differs: a broad mix of human-labelled public
+datasets from release-tier sources (permissive licences that allow commercial use and have no share-alike terms), schema
+variants derived from them, and question sets and states written and labelled by an open teacher. This chapter describes
+that recipe and gives the commands that rebuild it. Each release publishes its exact mix manifest (sources, licences,
+row counts and checksums), which is the authoritative record for that release.
 
 ## 13.1 The parts
 
@@ -17,6 +17,7 @@ mix manifest (sources, licences, row counts and checksums), which is the authori
 | Schema explosion | New questions built from the intent seeds by subsetting and recombining their options | Computed from the human labels |
 | Teacher-written rows | Question sets and states the teacher writes across many domains | The teacher's, calibrated on human gold |
 | Fan-out on real states | New question sets the teacher writes about real states from the seeds | The teacher's, calibrated on human gold |
+| Human-labelled photo questions | 10,000 photos from VizWiz-VQA, each taken by a blind person to ask a question about it | The answerers' own shares |
 
 Every training row is a `train` row of an R-tier (release-tier) source (section 14.1, chapter 16).
 
@@ -30,6 +31,13 @@ Every training row is a `train` row of an R-tier (release-tier) source (section 
 | Civil Comments | Seven Nouls: toxicity, severe toxicity, obscene, threat, insult, identity attack, sexually explicit |
 | GoEmotions | Nouls for emotions (neutral plus a sample of the other 27, each at its natural rate) and a four-way sentiment Choice |
 | LEDGAR | One Choice over 100 contract provision types |
+
+**Photos.** The released heads' mix, General v5c, adds 10,000 photos from VizWiz-VQA's training split (Gurari et al.
+2018; CC BY 4.0). Each photo is asked whether it shows enough to answer its question (a Noul, from the share of the ten
+crowd answerers who gave an answer rather than calling the photo unanswerable). It is also asked which answer is right,
+as a Choice over the four answers given most often (yes and no for a yes/no question, section 14.3), where at least
+three answerers gave one of them. The photos are not a seed for criterion 4 of the release criteria, which uses the six
+text datasets above (chapter 15).
 
 Where a dataset has several raters per item, the target is the **share** of raters choosing each answer, never the
 majority vote. Soft targets let the head's confidence follow human disagreement. An item that splits raters 2–1
@@ -55,7 +63,7 @@ Derived rows keep their parent's split, licence, tier and schema family, so no v
 ## 13.4 Teacher-written question sets and states
 
 `scripts/synth_generate.py` asks the teacher (Gemma 4 26B A4B) to write new tasks. Each job starts from a seeded
-**spec** (`decisivelm/synth/generate.py`), which fixes everything that should vary; the teacher only writes text to it.
+**spec** (`decisivelm/synth/generate.py`), which fixes everything that should vary. The teacher only writes text to it.
 A spec chooses:
 
 - **A domain and setting.** Twenty domains with several settings each: customer support, banking and finance, content
@@ -81,10 +89,10 @@ items, on which human coders disagree, teach the head to lower its confidence ex
 needed.
 
 The prompts are versioned files (`decisivelm/synth/prompts/generate_v1.yaml` to `generate_v4.yaml`, selected with
-`--spec-version`). They differ in the catch-all styles they ask for, the share of coding sets, and how often states
-are borderline, ambiguous or split. Version 4 adds plainly worded Scores with a middle level and an "open" state
-profile: a state that bears on a Score's claim without settling it. The released heads (General v5c, version 0.1) are
-trained on rows from versions 1, 2 and 4. Version 3 rows are not in its mix.
+`--spec-version`). They differ in the catch-all styles they ask for, the share of coding sets, and how often states are
+borderline, ambiguous or split. Version 4 adds plainly worded Scores with a middle level and an "open" state profile: a
+state that bears on a Score's claim without settling it. The released heads (General v5c, version 0.1) are trained on
+rows from versions 1, 2 and 4. Version 3 rows are not in their mix.
 
 Hiring questions are limited to factual Nouls about what a document says (for example, whether a CV lists a
 qualification). No question asks about or infers a personal attribute, and none asks whether to hire.
@@ -173,15 +181,16 @@ The result is an adapter bundle (chapter 6): the LoRA weights, scorer, query-tok
 backbone's model id and revision.
 
 **The 26B A4B head.** It uses the same mix, losses, learning rates, batching, validation sample and selection rule, with
-`--backbone 26b-a4b --dtype float32` in place of the E4B settings (the weights stay in bf16 and the computation is in
+`--backbone 26b-a4b --dtype float32` in place of the E4B settings. The weights stay in bf16 and the computation is in
 float32, because in bf16 the backbone's expert routing changed 19 to 22% of answers when only the packing of a request
-changed, section 2.1). LoRA covers the attention and shared MLP projections but not the 128 experts, which gives about
-9.3M adapter parameters (with the three query-token rows) and a 2.9M-parameter scorer, about 12M trained
-in all. The run was seed 0 only, on one NVIDIA RTX PRO 6000 Blackwell Max-Q GPU. It took 1.38 s per training row and
-peaked at 67.6 GB, with 4,096-token micro-batches and gradient checkpointing. Of at most 26,930 steps, validation
-loss stopped improving and early stopping ended the run at step 16,500, after about 101 hours; the bundle is the
-snapshot from step 15,000. The teacher, Gemma 4 26B A4B, is the same model as this head's backbone, so the head can
-share the teacher's blind spots more directly than the E4B head does. Its results are on its model card
+changed (sections 2.1 and 6.9). LoRA covers the attention and shared MLP projections but not the 128 experts, which
+gives about 9.3M adapter parameters (with the three query-token rows) and a 2.9M-parameter scorer, about 12M trained in
+all. The run was seed 0 only, on one NVIDIA RTX PRO 6000 Blackwell Max-Q GPU. It took 1.38 s per training row and peaked
+at 67.6 GB, with 4,096-token micro-batches and gradient checkpointing. The run was set for two epochs, at most 26,930
+steps. The calibration loss on the validation rows stopped improving after step 15,000, and early stopping ended the run
+at step 16,500, after about 101 hours. The bundle is the snapshot from step 15,000, the one with the lowest calibration
+loss. The teacher, Gemma 4 26B A4B, is the same model as this head's backbone, so the head can share the teacher's blind
+spots more directly than the E4B head does. Its results are on its model card
 ([docs/model-card-26b.md](../model-card-26b.md)).
 
 ## 13.8 Reproducing the general head
@@ -196,9 +205,9 @@ the release's manifest.
 
 ```bash
 uv run python scripts/fetch_dataset.py banking77 clinc150 helpsteer2 civil_comments goemotions ledgar multinli \
-    wiki_toxicity helpsteer3 measuring_hate_speech cuad massive
+    wiki_toxicity helpsteer3 measuring_hate_speech cuad massive vizwiz_vqa
 uv run python scripts/convert_dataset.py banking77 clinc150 helpsteer2 civil_comments goemotions ledgar multinli \
-    wiki_toxicity helpsteer3 measuring_hate_speech cuad massive
+    wiki_toxicity helpsteer3 measuring_hate_speech cuad massive vizwiz_vqa
 ```
 
 **2. Explode the intent seeds:**
@@ -216,8 +225,8 @@ uv run python scripts/label_teacher.py --splits gold_calib --data \
     data/processed/civil_comments.jsonl data/processed/goemotions.jsonl
 ```
 
-**4. Generate question sets and states**, once per spec version, with fan-out on real states (General v3d uses
-versions 1, 2 and 4):
+**4. Generate question sets and states**, once per spec version, with fan-out on real states (General v5c uses versions
+1, 2 and 4):
 
 ```bash
 uv run python scripts/synth_generate.py --name synth_v1 --spec-version 1 --sets N --states 6
@@ -228,10 +237,10 @@ uv run python scripts/synth_generate.py --name synth_v4 --spec-version 4 --seed 
 ```
 
 `--sets` is the number of question sets (each with `--states` states) and `--fanout PATH:N` the number of real states to
-write questions about. Each question set and each fan-out state is one job. For General v3d, `synth_v1` ran 15,000 jobs
-and wrote 39,563 rows, and `synth_v2` ran 12,000 jobs and wrote 40,962 rows (`results/suite_overlap.md`). Each job's
-spec is seeded from `--seed` and its job number, so a rerun writes the same specs. Generation is resumable and can stop
-at a given local hour (`--stop-at`) to leave a shared server free.
+write questions about. Each question set and each fan-out state is one job. For the text rows that General v3d and v5c
+share, `synth_v1` ran 15,000 jobs and wrote 39,563 rows, and `synth_v2` ran 12,000 jobs and wrote 40,962 rows
+(`results/suite_overlap.md`). Each job's spec is seeded from `--seed` and its job number, so a rerun writes the same
+specs. Generation is resumable and can stop at a given local hour (`--stop-at`) to leave a shared server free.
 
 **5. Label the generated rows and calibrate them into targets:**
 
@@ -244,8 +253,8 @@ for s in synth_v1 synth_v2 synth_v4; do
 done
 ```
 
-**6. Build the release mix.** The command that built General v5c, the mix of both 0.1 heads, is below. Check its sources and counts against the
-release's manifest:
+**6. Build the release mix.** The command that built General v5c, the mix of both 0.1 heads, is below. Check its sources
+and counts against the release's manifest:
 
 ```bash
 P=data/processed
@@ -262,10 +271,10 @@ uv run python scripts/build_mix.py --name general_v5c --adapter general --tiers 
   --zero-shot $P/llm_response_coding.jsonl
 ```
 
-The resulting mix has 215,433 training rows and 12,522 human-labelled `gold_calib` rows (SHA-256 `b2ecb006…`). It is
-General v3d's text mix plus 10,000 VizWiz-VQA photos. Of the text training rows, 78,422 come from teacher-written
-question sets and 14,257 from fan-out on the seeds' states. The coding study's rows are `gold_test` only and private.
-If you do not have its data, leave out `--zero-shot`.
+The resulting mix has 215,433 training rows and 12,522 human-labelled `gold_calib` rows (SHA-256 `b2ecb006…`). Its text
+rows are those of General v3d, an earlier head trained on text only, and it adds 10,000 VizWiz-VQA photos. Of the text
+training rows, 78,422 come from teacher-written question sets and 14,257 from fan-out on the seeds' states. The coding
+study's rows are `gold_test` only and private. If you do not have its data, leave out `--zero-shot`.
 
 **7. Train:**
 
@@ -275,9 +284,10 @@ uv run python scripts/train_p3.py --data data/mixes/general_v5c.jsonl --adapter 
     --epochs 2 --eval-every 500 --limit-val 1500 --select cal_loss --name general_v5c_e4b_r8_seed0
 ```
 
-For the 26B A4B head, use `--backbone 26b-a4b --dtype float32` and `--name general_v5c_26b-a4b_r8_seed0`.
-This writes the bundle to `bundles/general_v5c_e4b_r8_seed0/` and calibrated predictions for the mix's `gold_calib`
-and `gold_test` rows to `data/predictions/`. It is the bundle that is scored and shipped.
+For the 26B A4B head, use `--backbone 26b-a4b --dtype float32` and `--name general_v5c_26b-a4b_r8_seed0`, which writes
+its bundle to `bundles/general_v5c_26b-a4b_r8_seed0/`. The E4B command writes the bundle to
+`bundles/general_v5c_e4b_r8_seed0/` and calibrated predictions for the mix's `gold_calib` and `gold_test` rows to
+`data/predictions/`. Steps 8 and 9 score this bundle, and the release ships it.
 
 **8. Check it on the development sets** before any suite scoring. Run the bundle on MultiNLI's and Wikipedia Talk
 toxicity's gold rows with `scripts/predict_bundle.py`, and compare its review readiness with the base model's (P0).
@@ -299,8 +309,10 @@ uv run python scripts/label_teacher.py --data data/mixes/general_v5c.jsonl --spl
 uv run python scripts/score_suite.py --candidate general_v5c_e4b_r8_seed0 --calib-data data/mixes/general_v5c.jsonl
 ```
 
-`score_suite.py` reads the backbone from the bundle, so for the 26B A4B head P0 is the prompted 26B A4B. Criterion 4
-also compares the bundle with each seed's specialist, whose predictions `score_suite.py` reads from the paths in
+For the 26B A4B head, pass `--candidate general_v5c_26b-a4b_r8_seed0`. `score_suite.py` reads the backbone from the
+bundle, so for this head P0 is the prompted 26B A4B, the same model as the teacher, and the `gemma4_e4b` labels are not
+needed. Criterion 4 also compares the bundle with each seed's specialist, an E4B fine-tune trained on that seed alone
+(the 26B A4B head is compared with the same ones), whose predictions `score_suite.py` reads from the paths in
 `configs/release_seeds.yaml`. Criterion 2 (calibration) is judged after the per-task step (section 10.6), which
 `score_suite.py` runs itself. On each suite set it fits each method's Choice and Score scales on 100 rows chosen by a
 hash of their ids, and it scores every criterion on the remaining rows.

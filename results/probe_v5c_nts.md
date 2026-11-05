@@ -14,7 +14,7 @@
 - The remaining Score targets are human, mostly HelpSteer2's 60,000.
 - gold_calib and gold_test are unchanged.
 
-**Recipe:** the same as v5c (E4B, rank 8, 2 epochs at most, seed 0, `data/queues/general_v5c_nts.sh`).
+**Recipe:** the same as v5c (E4B, rank 8, 2 epochs at most, seed 0).
 - The first attempt crashed at step ~3,700 on a micro-batch whose rows had no targets. The fix is commit 45abf38, and the run was restarted 2026-11-01 18:39.
 - Early stopping ended training at step 14,500, after 824 min at 0.21 s/row. The bundle scored is the one selected by validation calibration loss, at step 13,000.
 - Its validation numbers cannot be compared with v5c's, because its val set also lost the teacher's Score questions.

@@ -1,8 +1,8 @@
 # General v5c, E4B head: development results against v3d and v5a
 
-General v5c (`general_v5c_e4b_r8_seed0`, E4B, rank 8) is the first-release training mix. It is v3d's mix plus 10,000 VizWiz-VQA photos. It has no audio, no MHS train and no HelpSteer2-Preference (`data/queues/general_v5c.sh`; RELEASE.md change log, 2026-10-30).
+General v5c (`general_v5c_e4b_r8_seed0`, E4B, rank 8) is the first-release training mix. It is v3d's mix plus 10,000 VizWiz-VQA photos. It has no audio, no MHS train and no HelpSteer2-Preference (RELEASE.md change log, 2026-10-30).
 
-**Training.** 215,433 training rows, 2 epochs at most (26,930 steps of 16 rows), on GPU0 beside the hub's small model.
+**Training.** 215,433 training rows, 2 epochs at most (26,930 steps of 16 rows), on one RTX PRO 6000 shared with other work.
 - Early stopping ended training at step 14,000. The bundle scored here is the one selected by validation calibration loss, at step 12,500.
 - Training took about 15 h: 14,000 steps of 16 rows at the logged 0.24 s/row, validation passes included. The whole job, from 08:10 to 01:24 with loading, calibration and the three bundles' predictions, took 17 h. (An earlier version of this line said "about 00:10, roughly 16 h", an estimate.)
 
