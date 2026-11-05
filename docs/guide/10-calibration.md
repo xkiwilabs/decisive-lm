@@ -146,8 +146,8 @@ trained on. On a task the head has not seen, that is not enough:
 - **The head hedges more on tasks it has not seen.** The released E4B head (General v5c) is underconfident zero-shot
   (used as it is, with no training or calibration on the task) on most new tasks. Its expected calibration error
   (ECE, section 10.7) is 0.06–0.28 on seven public benchmarks it never trained on, and 0.40 on the coding study.
-- **But not on every task.** On the release suite's 60 intents in ten languages it was not trained on, it and the
-  base model are *over*confident.
+- **But not on every task.** On the frozen held-out suite's 60 intents (section 15.2) in ten languages it was not
+  trained on, it and the base model are *over*confident.
 
 **So, on a task of your own, calibrate on about 100 labelled items before you set a review threshold.** Label about
 100 items, put them in `gold_calib`, predict them with the bundle, and fit two numbers on them: one factor on all the
@@ -164,7 +164,7 @@ two factors by NLL of the human majority answer, with ties left out (ECE is meas
 10.7), and writes a new bundle `bundles/<head>_mine/`. Its `calibration.json` records the factors, the task and the
 temperatures it started from. It also rewrites the bundle's predictions on your task through the new calibration, as
 `data/predictions/<head>_mine__<your stem>.jsonl`. With 100 items this brings the E4B head's ECE to 0.09 or below on all
-seven public benchmarks and to 0.05 or below on every task of the release suite. The release criteria measure
+seven public benchmarks and to 0.05 or below on every task of the frozen held-out suite. The release criteria measure
 calibration after this step ([chapter 15](15-release-criteria.md), criterion 2).
 
 **Why not one correction for every new task?** An earlier candidate (General v3c) shipped with one: the same two
@@ -178,11 +178,11 @@ without it, against 0.032 for a fine-tune trained on LEDGAR alone. MultiNLI stay
 
 ### Task calibration: how your raters use the scale
 
-Temperatures set how spread out the answers are. They cannot fix *where* the probability goes. Raters have habits on
-a scale that a model cannot know in advance: on Wikipedia Talk toxicity (about 10 raters a comment, five levels from
-"very toxic" to "very healthy"), raters gave 2.6% of their votes to "very toxic" and 1.6% to "very healthy". The base
-model and the general heads put 9–21% there, and were most confident on exactly those comments, where raters split.
-The released head's confidence then did not follow rater agreement (table below).
+Temperatures set how spread out the answers are. They cannot fix *where* the probability goes. Raters have habits on a
+scale that a model cannot know in advance: on Wikipedia Talk toxicity (about 10 raters a comment, five levels from "very
+toxic" to "very healthy"), raters gave 2.6% of their votes to "very toxic" and 1.6% to "very healthy". The 0.1 general
+heads put 7–17% on each extreme level and the prompted base models 9–27%, and they were most confident on exactly those
+comments, where raters split. The E4B head's confidence then did not follow rater agreement (table below).
 
 Task calibration fits two things for one question, on that question's labelled `gold_calib` rows
 (`decisivelm.calibrate.fit_task_calibration`, at least 100 rows per question), by soft NLL against the raters'
@@ -193,24 +193,25 @@ shares:
   that option.
 
 The calibration is keyed by the question's wording and options, never its id, and Choice options are sorted first, so
-reordering them finds the same calibration. Change the instructions or any option's name or description and the
-question no longer finds it, so its answers fall back to the temperatures alone. On Wikipedia toxicity's 2,040
-calibration rows (`results/taskcal_general_v5c_e4b.md`):
+reordering them finds the same calibration. Change the instructions or any option's name or description and the question
+no longer finds it, so its answers fall back to the temperatures alone.
+
+On Wikipedia toxicity's 2,040 calibration rows (`results/taskcal_general_v5c_e4b.md`):
 
 | Method (gold_test, 3,060 comments) | MAE (lower is better) | ρ(top p, agreement) (higher is better) |
 |---|---|---|
 | P0, temperatures only | 0.355 | +0.057 |
-| The released head, temperatures only | 0.462 | −0.010 |
+| The E4B head, temperatures only | 0.462 | −0.010 |
 | P0 + task calibration | 0.277 | +0.293 |
-| The released head + task calibration | **0.229** | **+0.349** |
+| The E4B head + task calibration | **0.229** | **+0.349** |
 
-MAE is the mean distance, in levels, between the predicted score and the raters' mean level. ρ(top p, agreement) is
-the correlation between the model's top probability and how much a comment's raters agree with each other
+MAE is the mean distance, in levels, between the predicted score and the raters' mean level. ρ(top p, agreement) is the
+correlation between the model's top probability and how much a comment's raters agree with each other
 ([chapter 11](11-evaluation.md), sections 11.2 and 11.3). For comparison, half of each comment's raters predict the
-other half's agreement at ρ 0.165 (`scripts/split_half.py`). That figure is not a ceiling. A model is
-scored against the agreement of the whole panel of about 10 raters, which is measured more precisely than the
-agreement of half of it. Fitted on 100 random `gold_calib` rows instead of all 2,040, task calibration did almost as
-well (the released head: MAE 0.230 and ρ +0.337, means over five draws).
+other half's agreement at ρ 0.165 (`scripts/split_half.py`). That figure is not a ceiling. A model is scored against the
+agreement of the whole panel of about 10 raters, which is measured more precisely than the agreement of half of it.
+Fitted on 100 random `gold_calib` rows instead of all 2,040, task calibration did almost as well (the E4B head: MAE
+0.230 and ρ +0.337, means over five draws).
 
 **On a task of your own.** Use task calibration for a question with at least 100 labelled `gold_calib` rows, and give
 every method you compare the same step:
@@ -220,14 +221,15 @@ uv run python scripts/task_calibrate.py --data data/processed/<your stem>.jsonl 
     --predictions data/predictions/<head>_mine__<your stem>.jsonl data/predictions/teacher_<your stem>__gemma4_e4b.jsonl
 ```
 
-For each prediction file it writes `<file>_task.jsonl`, ready for `scripts/eval_dataset.py`, and the fitted
-calibration as `<file>_task.calibration.json`. The offsets carry your raters' base rates for this question. They
-belong to the task, never to the general head.
+The second file is P0's predictions under the name `label_teacher.py` writes (section 9.9). If you ran `run_p0.py`
+instead, use its `P0_<data>_<backbone>.jsonl` (section 9.3). For each prediction file it writes `<file>_task.jsonl`,
+ready for `scripts/eval_dataset.py`, and the fitted calibration as `<file>_task.calibration.json`. The offsets carry
+your raters' base rates for this question. They belong to the task, never to the general head.
 
-Read each question's fitted `scale` in what it prints. A scale in the thousands means the model's scores carried no
-signal on that question. Its answers are then flattened, and the offsets give every item the raters' base rates.
-Calibration cannot add a signal the model lacks. For that, fine-tune on the task
-([chapter 9](09-fine-tuning-for-your-task.md)).
+Read each question's fitted `scale` in what it prints. Most scales fall between 0.1 and 5. A scale in the tens means a
+weak signal on those items, and one in the thousands means the model's scores carried no signal on that question. Its
+answers are then flattened, and the offsets give every item the raters' base rates. Calibration cannot add a signal the
+model lacks. For that, fine-tune on the task ([chapter 9](09-fine-tuning-for-your-task.md)).
 
 **Task calibration and the new-task factor.** The two steps fit different things:
 
@@ -252,7 +254,8 @@ are empty and its `b_noul` is 0. `DecisiveLM.load` and `attach_bundle` read `tas
 
 Calibration is measured on `gold_test`, against **hard** human labels:
 
-- Choice and Score: the raters' unique plurality. Items where raters tie are left out.
+- Choice and Score: the raters' most common answer, the human majority answer of section 10.6. Items where two answers
+  tie for most common are left out.
 - Noul: yes when the share is at least 0.5.
 
 | Metric | Meaning | Good |

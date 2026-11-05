@@ -1,11 +1,11 @@
 # Rating formats: hv-items/1 and hv-ratings/1
 
-Human labels with several raters per item are what the model is trained and judged on: the share of raters choosing
-each answer, and how much they agree (guide chapters [9](guide/09-fine-tuning-for-your-task.md) and
-[11](guide/11-evaluation.md)). To collect them, records are exported as **items** for a rating app, and the app's
-**ratings** are imported back as human targets. This page describes the two line formats exchanged with the app, as
-written and read by `decisivelm/data/rating.py`, `scripts/export_for_rating.py` and `scripts/import_ratings.py`. Any
-rating app that reads and writes them can be used.
+The model is trained and judged on human labels with several raters per item: the share of raters choosing each answer,
+and how much they agree (guide chapters [9](guide/09-fine-tuning-for-your-task.md) and [11](guide/11-evaluation.md)). To
+collect them, records are exported as **items** for a rating app, and the app's **ratings** are imported back as human
+targets. This page describes the two formats exchanged with the app, named after the DecisiveLM-HV rating app (`/1` is
+the format version), as written and read by `decisivelm/data/rating.py`, `scripts/export_for_rating.py` and
+`scripts/import_ratings.py`. Any rating app that reads and writes them can be used.
 
 Both files are JSON Lines: one JSON object per line.
 
@@ -42,9 +42,9 @@ what anyone else said.
 
 - `rate`: an ordinary item. Its answers become human targets.
 - `training`: shown to new raters with the reference answer, to learn the task. Its answers are never counted.
-- `check`: an item with an unambiguous answer, used to check that raters understood the task. By default only records
-  on which every human rater agreed are exported as check items (`--check-min-share 1.0`, the share of the most
-  chosen answer on every question).
+- `check`: an item with an unambiguous answer, used to check that raters understood the task. By default only records on
+  which every human rater agreed are exported as check items (`--check-min-share 1.0`, the least share that every
+  question's most chosen answer must reach).
 
 A reference is always the human consensus: the most chosen option or level, or yes when at least half the raters said
 yes. It is never a teacher's or a model's answer, and a record without a human target cannot be a training or check
@@ -59,14 +59,15 @@ their answer. `--data-check` adds up to three yes/no meta-questions after the it
 | `meta_distinct` | In each question above, the options or levels are clearly different from one another (left out when every question is yes/no) |
 | `meta_realistic` | The text reads like something a real person would write |
 
-These ids are reserved: a record whose own question ids clash with them is refused.
+These ids are reserved. A record whose own question ids clash with them is refused.
 
 **Newer fields.** `reference_source` and `meta_questions` were added after the first version of the format. They are
-written by default; `--no-a1-fields` leaves them out for an app that predates them (and refuses `--data-check`).
+written by default. `--no-a1-fields` leaves out these two fields, which the app calls its A1 fields, for an app that
+predates them. It cannot be combined with `--data-check`, which needs `meta_questions`.
 
 **Uploading.** An item's `task_set` must be the name of the task set it is uploaded into. Uploading the same file again
-changes nothing, but an item id that comes back with different content is refused, so export a new question subset
-of the same rows under a new task set.
+changes nothing, but an item id that comes back with different content is refused. To change the questions on rows
+already uploaded, export the new question subset of those rows under a new task set.
 
 **Private data.** Records whose source is not downloadable from a pinned public source are refused unless
 `--allow-private` is given. A rating app should refuse them too unless its deployment allows private data. Items with
@@ -116,17 +117,18 @@ Other fields (timings, export dates) are ignored.
 answer, has a value, and is not excluded.
 
 - **Repeats** are never counted. They measure each rater's consistency, which the import prints per rater.
-- **Over-quota answers** are counted like any other first answer: a late answer is still an independent judgement.
-  The import prints how many there were.
+- **Over-quota answers** are counted like any other first answer, because a late answer is still an independent
+  judgement. The import prints how many there were.
 - An answer that is not an option of the question is an error.
-- A question with fewer than `--min-raters` counted answers keeps its old target. Teacher targets are kept beside the
-  new human ones. Only rated records are written.
+- A question with fewer than `--min-raters` counted answers (3 by default) keeps its old target. Teacher targets are
+  kept beside the new human ones. Only rated records are written.
 
 The import also prints the mean pair agreement per question: the share of rater pairs that gave the same answer.
 
-**Meta-questions** judge the item, not its content, and never become targets. The import prints the mean yes share of
-each one and how many items were flagged, an item being flagged when any meta-question has a yes share below .5.
-`--meta-out PATH` writes one line per data-check item:
+**Meta-questions** judge whether the item is fit to rate (answerable, with distinct options, realistic), not the answers
+to its own questions, and never become targets. The import prints the mean yes share of each one and how many items were
+flagged, an item being flagged when any meta-question has a yes share below .5. `--meta-out PATH` writes one line per
+data-check item:
 
 ```json
 {"item_id": "r0", "meta": {"meta_answerable": [1.0, 3], "meta_realistic": [0.333, 3]}, "flagged": true}

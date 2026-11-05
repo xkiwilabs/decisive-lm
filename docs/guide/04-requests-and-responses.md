@@ -322,10 +322,10 @@ Settings come only from environment variables (the full list is in the module's 
 - **Limits**: `DECISIVELM_MEMORY_GB` caps the process's GPU memory, so an oversized request fails in this server, not in
   another program on the same GPU. `DECISIVELM_MAX_TOKENS` (default 12,288) refuses longer requests with `413`. A state
   is cut at 8,192 tokens (4.3), so the default leaves about 4,000 tokens for the questions and their options. A request
-  at the default limit peaks at about 18.6 GiB on E4B, inside a 20 GB `DECISIVELM_MEMORY_GB` cap. The 26B A4B general
-  head, which computes in float32, peaks at 68.6 GB at that limit (57.2 GB after loading), so give it
-  `DECISIVELM_MEMORY_GB=72`. It answers a 20-block request in about 0.47 s over HTTP, against about 0.10 s for the E4B
-  head, and the server refuses audio for it with `400`.
+  at the default limit peaks at about 18.6 GiB on E4B, inside a 20 GiB `DECISIVELM_MEMORY_GB` cap (the variable is in
+  GiB). The 26B A4B general head, which computes in float32, peaks at 67.0 GiB at that limit (55.8 GiB after loading),
+  so give it `DECISIVELM_MEMORY_GB=72`. It answers a 20-block request in about 0.47 s over HTTP, against about 0.10 s
+  for the E4B head, and the server refuses audio for it with `400`.
 - **Who may call it**: `DECISIVELM_AUTH` is `none` (the default, for a server only this machine can reach), `keys` (a
   `Bearer` token from `DECISIVELM_API_KEYS`), or `litellm` (any key a LiteLLM proxy at `DECISIVELM_LITELLM_URL` accepts,
   so the people who already have a key for that proxy can call this server through it).

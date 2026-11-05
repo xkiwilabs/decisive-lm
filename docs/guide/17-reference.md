@@ -20,7 +20,7 @@ usually set, and `--help` lists all of them.
 | `synth_generate.py` | Teacher-written question sets and states, and fan-out on real states, filtered and resumable (13.4) | `--name`, `--spec-version`, `--sets`, `--states`, `--fanout PATH:N`, `--val-share`, `--workers`, `--stop-at`, `--seed`, `--teacher`, `--build-only` |
 | `overlap_audit.py` | Word 8-gram overlap between the frozen suite and every trainable source, both directions (15.2) | `--share`, `--out`, `--drop` |
 | `build_mix.py` | Builds a training mix and its manifest, enforcing tiers and holdouts (13.6) | `--name`, `--adapter {general,user}`, `--tiers`, `--train PATH[:N]`, `--eval PATH[:N]`, `--zero-shot PATH[:N]`, `--cap MULTIPLIER=SHARE`, `--seed`, `--out-dir` |
-| `drop_teacher_score.py` | A copy of a mix with every teacher-labelled Score question removed from its `train` and `val` rows, to test whether the teacher's Score targets cause a head's Score failure; writes `data/mixes/<name>.jsonl` and its manifest | `--mix`, `--name` |
+| `drop_teacher_score.py` | Writes a copy of a mix, as `data/mixes/<name>.jsonl` with its manifest, with every teacher-labelled Score question removed from its `train` and `val` rows. It tests whether the teacher's Score targets cause the E4B head's weak review readiness on two-sided scales | `--mix`, `--name` |
 
 **Teacher and baselines**
 
@@ -172,7 +172,7 @@ The server (`decisivelm.serve`, 4.10) reads only environment variables:
 | `DECISIVELM_HOST` | Address(es) to bind, joined by commas (default `127.0.0.1`) |
 | `DECISIVELM_PORT` | Default 8003 |
 | `DECISIVELM_DEVICE` | e.g. `cuda:0` (default: CUDA, else MPS, else CPU) |
-| `DECISIVELM_MEMORY_GB` | A hard cap on the process's GPU memory (CUDA), so an oversized request fails in this server, not in a neighbour |
+| `DECISIVELM_MEMORY_GB` | A hard cap, in GiB, on the process's GPU memory (CUDA), so an oversized request fails in this server, not in a neighbour |
 | `DECISIVELM_MAX_TOKENS` | The longest packed request accepted (default 12,288: a state at its 8,192-token budget plus about 4,000 tokens of questions). Longer ones get `413` |
 | `DECISIVELM_AUTH` | `none` (default), `keys` or `litellm`. With `none`, the server refuses to bind anything but loopback unless `DECISIVELM_ALLOW_UNAUTHENTICATED=1` |
 | `DECISIVELM_API_KEYS` | Bearer tokens accepted with `keys`, joined by commas |

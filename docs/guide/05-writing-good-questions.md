@@ -162,11 +162,12 @@ fifty others, so you can group questions freely:
 - **Ask everything about a state in one request.** The state is processed once and shared by all questions, so each
   extra question costs only its own instructions and options.
 - **Adding a question cannot change the others.** No answer sees another question, so you can add a question to a
-  production request without re-validating the existing ones. In bf16 (16-bit floating point, in which E4B bundles run
-  by default), a different packing still moves probabilities through rounding. On E4B, adding a question moved them by
-  0.003 on average and at most 0.07, and flipped none of 100 answers. On 26B A4B in bf16, 19–22% of answers flipped when
-  only the packing changed, so a 26B A4B head runs in float32. The general head's bundle sets this, and a fine-tune of
-  your own needs `train_p3.py --dtype float32` (sections 3.1, 6.9 and 11.7).
+  production request without re-validating the existing ones, as long as a 26B A4B head runs in float32 (below). In bf16
+  (16-bit floating point, in which E4B bundles run by default), a different packing still moves probabilities through
+  rounding. On E4B, adding a question moved them by 0.003 on average and at most 0.07, and flipped none of 100 answers.
+  On 26B A4B in bf16, 19–22% of answers flipped when only the packing changed, so a 26B A4B head runs in float32. The
+  general head's bundle sets this, and a fine-tune of your own needs `train_p3.py --dtype float32` (sections 3.1, 6.9
+  and 11.7).
 - **One answer is never context for another.** If question B depends on the answer to question A, ask A first and put
   its answer in B's state or instructions in a second request.
 

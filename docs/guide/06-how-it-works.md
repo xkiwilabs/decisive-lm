@@ -161,8 +161,9 @@ The backbone's own weights are never changed. Training adds three small parts:
      module paths (`lora_target_regex` in `configs/model.yaml`).
    - The expression is anchored on the language model, so the vision and audio encoders' identically named
      projections are left alone.
-   - On 26B A4B the expert layers and the router stay frozen. LoRA adapts attention and the dense MLP that every
-     layer runs beside the experts.
+   - On 26B A4B the expert layers (128 feed-forward sub-networks, of which each token uses 8) and the router (the small
+     layer that picks those 8) stay frozen. LoRA adapts attention and the dense MLP that every layer runs beside the
+     experts.
    - `B` starts at zero, so a new adapter reproduces the base model exactly. Adapter weights are kept in fp32 (32-bit
      floating point). The backbone runs in bf16 by default, a 16-bit format with the same range as fp32 but fewer
      digits of precision.
@@ -173,9 +174,10 @@ The backbone's own weights are never changed. Training adds three small parts:
 LoRA moves the judgement "how well does this option fit this state" into the hidden state at the query token. A frozen
 chat model's state there was never trained to encode it. How much LoRA adds over a scorer trained on the frozen backbone
 alone (P1, [chapter 9](09-fine-tuning-for-your-task.md), section 9.4) depends on the task and the backbone. On E4B it
-raised Civil Comments AUROC from 0.875–0.884 to 0.954 but moved Banking77 accuracy only from 0.887–0.900 to 0.902 (both
-measures are defined in chapter 11). On 26B A4B it raised agreement with human coders on the coding study (Cohen's κ,
-agreement corrected for chance, section 11.6) from κ 0.699 to 0.805.
+raised Civil Comments AUROC from 0.875–0.884 to 0.954 but moved Banking77 accuracy only from 0.887–0.900 to 0.902. Each
+range is three seeds of the scorer alone, against one LoRA run (seed 0), and both measures are defined in chapter 11. On
+26B A4B it raised agreement with human coders on the coding study (Cohen's κ, agreement corrected for chance, section
+11.6) from κ 0.699 to 0.805.
 
 ## 6.7 Losses
 
@@ -210,9 +212,9 @@ Because of the masks:
 - adding or removing a question, renaming a question id, or reordering a Choice's options leaves every other logit
   unchanged.
 
-The only numerical effect of a different packing is floating-point rounding, from different kernel shapes and
-summation orders. In bf16 this is large enough to flip an answer whose top two options are close (section 11.7 gives
-the measured sizes). In fp32 it is negligible.
+The only numerical effect of a different packing is floating-point rounding, from different kernel shapes and summation
+orders. In bf16 this is large enough to flip an answer whose top two options are close (section 11.7 gives the measured
+sizes, and section 6.9 the larger effect on 26B A4B in bf16). In fp32 it is negligible.
 
 This is tested at two levels:
 
@@ -250,7 +252,7 @@ from decisivelm.model import load_backbone
 backbone, tokenizer = load_backbone("26b-a4b", dtype=torch.float32)
 ```
 
-This keeps the checkpoint's bf16 weights (about 58 GB of GPU memory once loaded, within the 72 GB free that chapter 2
+This keeps the checkpoint's bf16 weights (about 56 GiB of GPU memory once loaded, within the 72 GiB free that chapter 2
 asks for) and runs every matrix multiplication in fp32 (`decisivelm.model.fp32_compute`). The released checkpoint is
 itself bf16, so converting its weights to fp32 for each multiplication loses nothing, and the answers equal those of a
 full fp32 copy of the model, which would need about 104 GB. Use it wherever answers must not depend on what else is in a

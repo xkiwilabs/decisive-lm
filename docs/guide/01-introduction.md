@@ -44,8 +44,8 @@ Every question is one of three types (chapter 4 has the full format):
 "Noul" is the published API's name for this type (section 4.1), which it describes as a continuous boolean. A Noul is
 a yes/no question answered with a probability instead of a hard yes or no.
 
-These three types compose. An extraction task becomes a set of Nouls ("the invoice is overdue", "the invoice is in
-euros"); a rubric becomes a set of Scores; a codebook becomes a Choice, or one Noul per code.
+These three types can be combined. An extraction task becomes a set of Nouls ("the invoice is overdue", "the invoice is
+in euros"); a rubric becomes a set of Scores; a codebook becomes a Choice, or one Noul per code.
 
 ## 1.3 Why the confidence matters
 
@@ -53,20 +53,21 @@ For many decision tasks a capable model is already about as accurate as a carefu
 *which* of its answers to trust. If every answer comes back at 0.98, a human reviewer has to check everything or
 nothing.
 
-DecisiveLM is judged first on **review readiness**: whether its confidence tells a person which answers to check. The
-yardstick is human coders. When several people label the same item, some items get unanimous labels and others split
-the coders. A review-ready model is confident on the first kind and unsure on the second. A reviewer who checks only
-its least confident 20% of answers then catches more than the 20% of its errors that a confidence with no information
-would catch. On a study of coding free-text responses (Alhasan, Diaz Monfort & Richardson, *Knowing which
-responses to check*, under review), the least confident 20% of the general head's answers (section 1.4) held 60.6% of
-its errors zero-shot, against 41.9% for the prompted base model ([model card](../model-card.md)). The measures come
-from that study:
+DecisiveLM is judged first on **review readiness**: whether its confidence tells a person which answers to check. It is
+measured against human coders. When several people label the same item, some items get unanimous labels and others split
+the coders. A review-ready model is confident on the first kind and unsure on the second. A reviewer who checks only its
+least confident 20% of answers then catches more than the 20% of its errors that a confidence with no information would
+catch. On a study of coding free-text responses (Alhasan, Diaz Monfort & Richardson, *Knowing which responses to check*,
+under review), the least confident 20% of the E4B general head's answers (section 1.4) held 60.6% of its errors
+zero-shot, against 41.9% for the prompted base model ([model card](../model-card.md)). The measures come from that
+study:
 
 - **Tracking**: the rank correlation between the model's confidence and how much the human coders agreed on each
   item, overall and within each category.
 - **Tie detection**: how well low confidence picks out the items on which the coders had no majority.
 - **Dynamic range**: how far the model's average confidence moves between the items people agree on and the items they
-  split on. A confidence that only moves from 0.986 to 0.998 ranks items but cannot carry a review threshold.
+  split on. A confidence that only moves from 0.986 to 0.998 ranks items, but any review threshold on it has to fall
+  within that narrow band.
 - **Confidence-guided review**: send the least confident 20% of answers to a person; how many of the model's errors
   does that catch, and how accurate is the rest?
 
@@ -76,8 +77,8 @@ who chose each label, never on a majority vote.
 
 ## 1.4 What the project provides
 
-A **head** is the small set of trained additions that turns Gemma 4 into a decision model (about 20 million
-parameters in the general head). It has four parts:
+A **head** is the small set of trained additions that turns Gemma 4 into a decision model (about 20 million parameters
+in the E4B general head). It has four parts:
 
 - **LoRA weights** (low-rank adaptation): small trained corrections added to the language model's layers
   (section 6.6);
@@ -121,15 +122,15 @@ DecisiveLM runs on two Gemma 4 models. Nothing in the code is tied to one of the
 | Size | about 4B effective parameters | 25.2B parameters, a mixture of experts with about 3.8B active per token |
 | Inputs DecisiveLM uses | text, JSON, images, audio | text, JSON, images |
 | Memory for the weights | fits a single consumer or workstation GPU, or Apple silicon | about 50 GB in bf16 |
-| General head | published (`decisivelm-e4b-general`) | published (`decisivelm-26b-a4b-general`), needs a GPU with about 72 GB free |
+| General head | published (`decisivelm-e4b-general`) | published (`decisivelm-26b-a4b-general`), needs a GPU with about 72 GiB free or a Mac with 96 GB or more |
 
 Audio needs E4B, because 26B A4B has no audio encoder. Both backbones are developed by Google DeepMind and released
 under Apache-2.0.
 
 ## 1.6 Who it is for
 
-- **Researchers who code text**, such as survey answers, interview excerpts or open-ended responses, and want a
-  model that matches trained coders and flags the items worth a second look.
+- **Researchers who code text**, such as survey answers, interview excerpts or open-ended responses, and want a model
+  that matches trained coders and flags the items a person should check.
 - **Developers** who need routing, triage, moderation, tagging or rubric scoring with predictable outputs and
   latency, running locally.
 - **Teams that cannot send data out**: everything runs on your own machine, from labelling to serving.

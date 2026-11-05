@@ -186,7 +186,7 @@ float32, because in bf16 the backbone's expert routing changed 19 to 22% of answ
 changed (sections 2.1 and 6.9). LoRA covers the attention and shared MLP projections but not the 128 experts, which
 gives about 9.3M adapter parameters (with the three query-token rows) and a 2.9M-parameter scorer, about 12M trained in
 all. The run was seed 0 only, on one NVIDIA RTX PRO 6000 Blackwell Max-Q GPU. It took 1.38 s per training row and peaked
-at 67.6 GB, with 4,096-token micro-batches and gradient checkpointing. The run was set for two epochs, at most 26,930
+at 66.0 GiB, with 4,096-token micro-batches and gradient checkpointing. The run was set for two epochs, at most 26,930
 steps. The calibration loss on the validation rows stopped improving after step 15,000, and early stopping ended the run
 at step 16,500, after about 101 hours. The bundle is the snapshot from step 15,000, the one with the lowest calibration
 loss. The teacher, Gemma 4 26B A4B, is the same model as this head's backbone, so the head can share the teacher's blind
@@ -198,7 +198,7 @@ spots more directly than the E4B head does. Its results are on its model card
 The steps below rebuild the head from public data and an open teacher. The teacher steps need a vLLM server serving
 Gemma 4 26B A4B (chapter 12). Training needs one GPU with about 20 GB of memory for E4B with LoRA, at 4,096-token
 micro-batches with gradient checkpointing, which is on by default (chapter 2). The 26B A4B head needs a GPU with about
-72 GB free (67.6 GB was measured). Compare your sources and row counts with
+72 GiB free (66.0 GiB was measured). Compare your sources and row counts with
 the release's manifest.
 
 **1. Fetch and convert the public datasets** (chapter 14):

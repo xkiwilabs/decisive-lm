@@ -281,9 +281,9 @@ uv run python scripts/convert_dataset.py --converter data/converters/support_tic
 ```
 
 `convert_dataset.py` runs your converter the same way as the built-in ones. It passes the backbone's tokenizer
-(`--backbone`, default `e4b`), checks every row against the registry, writes `data/processed/support_tickets.jsonl` and
-prints the number of rows in each split with a hash of each split's ids. `--raw DIR` reads the raw data from a folder
-other than `data/raw/<name>`.
+(`--backbone`, default `e4b`, which suits both backbones because they share one tokenizer), checks every row against the
+registry, writes `data/processed/support_tickets.jsonl` and prints the number of rows in each split with a hash of each
+split's ids. `--raw DIR` reads the raw data from a folder other than `data/raw/<name>`.
 
 Guidelines:
 
@@ -298,9 +298,10 @@ Guidelines:
   `Record`s.
 - **Give `gold_calib` enough items.** Temperatures are fitted on `gold_calib` and need about 100 questions of each type
   (chapter 10). The shares above put 12% of items there, which reaches 100 only at about 830 items. A dataset of 200
-  items gets 24. For a smaller dataset, either raise the `gold_calib` share (25% reaches 100 at 400 items) or accept a
-  temperature fitted on fewer questions, which is less certain. Calibration prints a warning when a question type has
-  fewer than 100 questions to fit on.
+  items gets 24. For a smaller dataset, either raise the `gold_calib` share or accept a temperature fitted on fewer
+  questions, which is less certain. A share of 25% reaches 100 at 400 items. In `_split` that means, for example,
+  `train` below 0.5, `val` below 0.6 and `gold_calib` below 0.85, which takes the extra from `train`. Calibration prints
+  a warning when a question type has fewer than 100 questions to fit on.
 
 The public seed datasets are fetched and converted with two commands. `fetch_dataset.py` downloads the files pinned in
 `configs/datasets.yaml` into `data/raw/<name>/`, with a sha256 manifest. `convert_dataset.py` runs the registered

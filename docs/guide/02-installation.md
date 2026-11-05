@@ -17,24 +17,29 @@ general head (either one) needs only the steps up to section 2.5. Training needs
 
 Measured memory use:
 
-| Backbone | Inference (bf16) | Training a head (bf16, LoRA) |
+| Backbone | Inference | Training a head (LoRA) |
 |---|---|---|
-| Gemma 4 E4B | 16.0 GiB predicting with `--max-tokens 2048` (the most tokens processed at once), 17.8 GiB with 8192, and about 18.6 GiB for one request at the server's default limit (section 4.10). The weights are 14.8 GB of it | 16.7 GiB with `--max-tokens 2048`, 18.5 GiB with 4096 and 21.2 GiB with the default 8192, with gradient checkpointing (on by default). Section 9.5 lists settings for smaller GPUs and Apple silicon |
-| Gemma 4 26B A4B | 49 GB (48.1 GB of weights) | 59–69 GB with `--max-tokens 4096` |
-| 26B A4B general head, through the server (fp32 computation) | 57.2 GB after loading, 68.6 GB at the peak, at the server's default limit of 12,288 tokens per request | 67.6 GB training the head with micro-batches of 4,096 tokens |
+| Gemma 4 E4B (bf16) | 16.0 GiB predicting with `--max-tokens 2048` (the most tokens processed at once), 17.8 GiB with 8192, and about 18.6 GiB for one request at the server's default limit (section 4.10). The weights are 14.8 GiB of it (16.0 GB on disk) | 16.7 GiB with `--max-tokens 2048`, 18.5 GiB with 4096 and 21.2 GiB with the default 8192, with gradient checkpointing (on by default). Section 9.5 lists settings for smaller GPUs and Apple silicon |
+| Gemma 4 26B A4B (bf16) | 49 GiB (48.1 GiB of weights, 51.6 GB on disk) | up to 69 GiB with `--max-tokens 4096`, on one coding fine-tune |
+| 26B A4B general head, through the server (fp32 computation) | 55.8 GiB after loading, 67.0 GiB at the peak, at the server's default limit of 12,288 tokens per request | 66.0 GiB training the head with `--max-tokens 4096` |
+| 26B A4B general head on Apple silicon (MPS, fp32 computation) | 56.0 GiB after loading and 58.6 GiB at the peak over 20 requests of up to 1,599 tokens, on an M5 Max with 128 GB of unified memory, so a Mac needs 96 GB or more. About 1.9 s per request once warm | not measured |
 
 The E4B figures are the peaks `nvidia-smi` reported for each process on one RTX PRO 6000, CUDA context included, for a
-300-item fine-tune and for predicting 792 rows. A 24 GB GPU is enough for E4B, and a 16 GB GPU is not at these
-settings.
+300-item fine-tune and for predicting 792 rows. The 26B A4B figures are `nvidia-smi` readings of the whole card, an RTX
+PRO 6000 Blackwell Max-Q (96 GB) with nothing else on it, sampled every 0.2 s while serving and every 10 s while
+training. The serving peak came on the longest requests, about 12,000 tokens with 110 to 130 options. The bf16 26B A4B
+row is PyTorch's own peak, which leaves out the CUDA context of about 0.5–1 GiB. A 24 GB GPU is enough for E4B, and a 16
+GB GPU is not at these settings.
 
-bf16 and fp32 are 16-bit and 32-bit floating-point number formats. Models load and run in bf16 by default, which
-halves memory but rounds more coarsely. Gemma 4 26B A4B is a mixture-of-experts model, which sends each token through 8
-of its 128 expert sub-networks. In bf16 that choice is sensitive to rounding, so a head on 26B A4B is best run with
+bf16 and fp32 are 16-bit and 32-bit floating-point number formats. Models load and run in bf16 by default, which halves
+memory but rounds more coarsely. Gemma 4 26B A4B is a mixture-of-experts model, which sends each token through 8 of its
+128 expert sub-networks. In bf16 the choice of experts is sensitive to rounding, so a head on 26B A4B is best run with
 fp32 computation (`--dtype float32` in `train_p3.py`, `cache_features.py` and `check_invariance.py`, or
-`dtype=torch.float32` in `DecisiveLM.load`). This keeps the expert weights, about 90% of the model, in bf16 and
-converts them to fp32 for each multiplication, so it needs about 58 GB for inference rather than the 104 GB of a full
-fp32 copy. The 26B A4B general head does this on its own when you load it, and a GPU for it needs about 72 GB free.
-Section 6.9 gives the details. E4B is a dense model and much less sensitive to rounding (section 11.7).
+`dtype=torch.float32` in `DecisiveLM.load`). This keeps the expert weights, about 90% of the model, in bf16 and converts
+them to fp32 for each multiplication, so it needs about 56 GiB for inference rather than the 104 GB of a full fp32 copy.
+The 26B A4B general head does this on its own when you load it, and it needs a GPU with about 72 GiB free or a Mac with
+96 GB or more of unified memory. Section 6.9 gives the details. E4B is a dense model and much less sensitive to rounding
+(section 11.7).
 
 ## 2.2 Install the package
 
@@ -77,6 +82,8 @@ The first load downloads the weights into your Hugging Face cache. To download a
 
 ```bash
 uv run hf download google/gemma-4-E4B-it --revision ee0ef6023621cff504d758262d4e04895a5af4a2
+# for the 26B A4B head (about 50 GB):
+uv run hf download google/gemma-4-26B-A4B-it --revision 4d7ae4984b7db7de8f8457170b3f1a419ee76d52
 ```
 
 The revision is part of every head. A head records the backbone id and revision it was trained on
@@ -120,9 +127,11 @@ mixture-of-experts one, with a sliding window of 8 tokens so short inputs exerci
 - that every response conforms to the request (probabilities over exactly the given options, summing to 1);
 - the data rules: licence tiers, held-out datasets, and the clean-room checks of chapter 16.
 
-A clean run ends with a line like `360 passed, 1 skipped, 20 warnings`. The skipped test is the HTTP server's, which
-needs the `serve` extra, and the warnings come from numpy dividing by zero in tests of degenerate inputs. Both are
-expected. Any `failed` or `error` is not.
+In a fresh clone of version 0.1, a clean run ends with a line like `383 passed, 2 skipped, 36 warnings` (the counts grow
+as tests are added). One skipped test is the HTTP server's, which needs the `serve` extra. The other is the canary test
+of chapter 16, which looks under `data/processed/` and is skipped until that folder exists. The warnings come from tests
+of degenerate inputs: numpy dividing by zero, and calibration warnings that the tests trigger on purpose. All of these
+are expected. Any `failed` or `error` is not.
 
 Run a single test with its path, for example:
 
@@ -145,8 +154,9 @@ uv run python scripts/m0_real.py --backbone 26b-a4b --fp32-device cpu
 
 It reports:
 
-1. the configuration facts DecisiveLM relies on: the pattern of sliding-window and global attention layers, the
-   sliding window size, key-value sharing, and the attention backends available;
+1. the configuration facts DecisiveLM relies on: the pattern of sliding-window and global attention layers, the sliding
+   window size, key-value sharing (layers that reuse an earlier layer's attention keys and values), and the attention
+   backends available;
 2. that the tokenizer never produces the three reserved token ids used as query tokens;
 3. mask equivalence in fp32, with an image, a state longer than the sliding window, and branches whose combined length
    exceeds it (on 26B A4B with expert selection held fixed, so the check tests the masks rather than routing);
@@ -161,7 +171,7 @@ with E4B on one NVIDIA RTX PRO 6000 GPU.
 | Flag | Default | Use |
 |---|---|---|
 | `--backbone` | `e4b` | `e4b` or `26b-a4b` |
-| `--device` | `cuda` if available, else `mps`, else `cpu` | where the bf16 sections run; on CUDA the model spreads over every visible GPU |
+| `--device` | `cuda` if available, else `mps`, else `cpu` | where the bf16 sections run. On CUDA the model spreads over every visible GPU |
 | `--fp32-device` | the `--device` | where the fp32 mask check runs; `cpu` for 26B A4B on a single GPU (its fp32 copy is about 104 GB) |
 | `--skip-latency` | off | skip the timing section |
 

@@ -4,18 +4,19 @@
 
 > **Status:** version 0.1, a preview. The toolkit is usable, and the first two general heads, on Gemma 4 E4B and 26B
 > A4B, are published with it. Both were held to the release criteria in [chapter 15](docs/guide/15-release-criteria.md),
-> and each model card explains the checks its head misses against the same backbone prompted (P0). The
-> [E4B card](docs/model-card.md) lists three. The main one is review readiness no worse than P0's, on one task. The
-> [26B A4B card](docs/model-card-26b.md) lists five, against a much stronger P0. The main one is accuracy on intents in
-> ten languages, 5 points below P0's.
+> and each model card explains the checks its head misses against the same backbone prompted to answer directly (P0).
+> The [E4B card](docs/model-card.md) lists three. The main one is that, on one task, its review readiness is worse than
+> P0's. The [26B A4B card](docs/model-card-26b.md) lists five, against a much stronger P0. The main one is accuracy on
+> intents in ten languages, 5 points below P0's.
 
 DecisiveLM is a *System One* model, in psychology's sense of quick, intuitive judgement
 ([1.1](docs/guide/01-introduction.md#11-what-a-system-one-decision-model-is)). You give it a state — a message, a
 document, a JSON record, an image or an audio clip — and a set of typed questions about it. In a single forward pass
 (one run of the model over the input, with no text generated) it returns answers drawn only from the options you
-supplied. Its probabilities are calibrated against human judgement, so that of the answers it gives at 0.8, about 80%
-match the human label. It runs on your own hardware, its weights are open, and you can fine-tune it on your own
-decisions.
+supplied. Its probabilities are calibrated against human judgement, so that on a calibrated task about 80% of the
+answers it gives at 0.8 match the human label. Calibrating it for a new task takes about 100 labelled items
+([guide 10.6](docs/guide/10-calibration.md)). It runs on your own hardware, its weights are open, and you can fine-tune
+it on your own decisions.
 
 A **head** is the small set of trained additions that turns Gemma 4 into this model. It has four parts: LoRA weights
 (low-rank adaptation, small trained corrections to the language model's layers), three query-token embeddings (one
@@ -77,32 +78,36 @@ fine-tune) and can flip an answer whose top two options are close. In fp32 (32-b
 | Model | What it is | Use it when |
 |---|---|---|
 | **General head** (`decisivelm-e4b-general`) | A head for Gemma 4 E4B, trained on human-labelled public datasets (photos with questions among them) and on questions across many domains labelled by a teacher (a larger model whose answer probabilities become training labels, here Gemma 4 26B A4B), and calibrated on human labels. Released as a preview ([model card](docs/model-card.md)). | You want answers to new questions with no training: classification, moderation, routing, quality judgements, coding of free-text answers. |
-| **26B A4B general head** (`decisivelm-26b-a4b-general`) | The same training data on Gemma 4 26B A4B, run in float32 computation. Its confidence is a better guide to which answers to check than the E4B head's, at about 0.47 s per request on a GPU with about 72 GB free. Released as a preview ([model card](docs/model-card-26b.md)). | You have that GPU and review readiness matters more than speed. |
+| **26B A4B general head** (`decisivelm-26b-a4b-general`) | The same training data on Gemma 4 26B A4B, run in float32 computation. Its confidence is a better guide to which answers to check than the E4B head's, at about 0.47 s for a 20-block request over HTTP (0.10 s for the E4B head) on a GPU with about 72 GiB free. It also runs on a Mac with 96 GB or more of unified memory, at about 1.9 s per request. Released as a preview ([model card](docs/model-card-26b.md)). | You have that GPU or Mac, and review readiness matters more than speed. |
 | **Your own fine-tune** | The same architecture trained on your labelled examples with the toolkit, on your own machine. | Your task has its own conventions or long, rule-heavy instructions, and you have a few hundred labelled items, ideally rated by more than one person. |
 | **Backbones** | Gemma 4 **E4B** (default; small and fast) and Gemma 4 **26B A4B** (a larger mixture-of-experts model). Each head is tied to the backbone it was trained on. | E4B for most uses; 26B A4B where accuracy matters more than speed and memory. |
 
 Each model is compared, in every report, with two baselines: the same Gemma 4 model prompted to answer directly
-(*P0*), and the larger Gemma 4 26B A4B model used as the teacher.
+(*P0*), and the larger Gemma 4 26B A4B model used as the teacher. For the 26B A4B head the two are the same model.
 
 ## Results
 
-Each release's results, against P0 and the teacher on a frozen held-out suite, are in the
-[model card](docs/model-card.md). The general head's preview is never less accurate than P0 on the suite. After a
-calibration step that fits two numbers on 100 labelled items of each task (guide
+Each release's results, against P0 and the teacher on a frozen held-out suite, are in the model cards
+([E4B](docs/model-card.md), [26B A4B](docs/model-card-26b.md)). The general head's preview is never less accurate than
+P0 on the suite. After a calibration step that fits two numbers on 100 labelled items of each task (guide
 [section 10.6](docs/guide/10-calibration.md)), its calibration error (ECE) is 0.05 or below on every suite task. Its
 main known shortfall is on two-sided social rating scales it was not trained on. Such a scale runs between two opposite
 poles through a neutral middle, for example "strongly respectful … neither … strongly disrespectful". On these scales
 its confidence is a worse guide to which answers to check than P0's. For such a task, use task calibration (guide 10.6),
-which fits a scale and an offset for each level on a few hundred of your own ratings, or fine-tune on them. It also
-misses two smaller calibration checks, which the model card describes. The 26B A4B head is more accurate than the E4B
-head on every suite task's primary metric, and on the hate-speech survey's rating scales its confidence ranks answers by
-rater agreement better than its P0's, the check the E4B head fails. Against its P0, the 26B A4B prompted, it is 5 points
-less accurate on intents in ten languages it was not trained on, and it misses four smaller checks
-([its model card](docs/model-card-26b.md)). Of images, both heads are trained only on photo questions (VizWiz-VQA,
-photos taken by blind people to ask a question). Neither is trained on audio, and 26B A4B takes no audio input.
-Fine-tune examples on images and audio (photo quality, emotion in the voice, whether an object is alive) are in the
-guide ([9.9](docs/guide/09-fine-tuning-for-your-task.md#99-images-and-audio)), and the model card's roadmap adds more
-images and audio to the general head in version 1.0.
+which fits a scale and an offset for each level on 100–300 of your own ratings, or fine-tune on them. It also misses two
+smaller calibration checks, which the model card describes.
+
+The 26B A4B head is more accurate than the E4B head on every suite task's primary metric, and on the rating scales of
+the hate-speech survey (Measuring Hate Speech) its confidence ranks answers by rater agreement better than its P0's, the
+check the E4B head fails. Against its P0 (the 26B A4B prompted to answer directly), it is 5 points less accurate on
+intents in ten languages it was not trained on, and it misses four smaller checks
+([its model card](docs/model-card-26b.md)).
+
+Of images, both heads are trained only on photo questions (VizWiz-VQA, photos taken by blind people to ask a question).
+Neither is trained on audio, and 26B A4B takes no audio input. Fine-tune examples on images and audio (photo quality,
+emotion in the voice, whether an object is alive) are in the guide
+([9.9](docs/guide/09-fine-tuning-for-your-task.md#99-images-and-audio)), and the model card's roadmap adds more images
+and audio to the general heads in version 1.0.
 
 ## Getting started
 
@@ -143,17 +148,17 @@ Every dataset, with its licence, tier and role, is listed in [14. Datasets](docs
 
 ## How it was built
 
-Each general head's LoRA weights sit on its backbone's language-model layers (on 26B A4B, the attention and the
-shared feed-forward layers, not the 128 experts). Each option, level or statement in a
-request ends with one of three reserved query tokens (token ids the tokenizer never produces from text), and a small
-scoring network turns the model's hidden state there, the vector its last layer produces at that position, into a
-score ([6](docs/guide/06-how-it-works.md)). It was trained on public human-labelled datasets (intent detection,
-response quality, toxicity, emotion, contract provisions), on systematic rewrites of their questions, and on question
-sets and states written by Gemma 4 26B A4B across many domains and labelled by it with probabilities that were then
-calibrated on human labels. Its temperatures, one per question type and number of options, are fitted on
-human-labelled data only. Each release is scored once, on a frozen suite of held-out human-labelled tasks that no
-training or selection decision ever saw ([15. Release criteria](docs/guide/15-release-criteria.md)). The training mix
-manifest, the teacher-labelled data and the per-item predictions are published with each release
+Each general head's LoRA weights sit on its backbone's language-model layers (on 26B A4B, the attention and the shared
+feed-forward layers, not the 128 experts). Each option, level or statement in a request ends with one of three reserved
+query tokens (token ids the tokenizer never produces from text), and a small scoring network turns the model's hidden
+state there, the vector its last layer produces at that position, into a score ([6](docs/guide/06-how-it-works.md)).
+Both heads were trained on public human-labelled datasets (intent detection, response quality, toxicity, emotion,
+contract provisions, questions about photos), on systematic rewrites of their questions, and on question sets and states
+written by Gemma 4 26B A4B across many domains and labelled by it with probabilities that were then calibrated on human
+labels. Each head's temperatures, one per question type and number of options, are fitted on human-labelled data only.
+Each release is scored once, on a frozen suite of held-out human-labelled tasks that no training or selection decision
+ever saw ([15. Release criteria](docs/guide/15-release-criteria.md)). The training mix manifest, the teacher-labelled
+data and the per-item predictions are published with each release
 ([13](docs/guide/13-how-the-general-head-was-trained.md), [14](docs/guide/14-datasets.md)).
 
 ## Principles
@@ -163,15 +168,15 @@ manifest, the teacher-labelled data and the per-item predictions are published w
   evaluated against human agreement.
 - **Independent answers.** No answer can influence another. The attention masks guarantee this, and the tests check
   it. Rounding still moves answers slightly, by less than 0.0002 in fp32 and by about 0.03 on average in bf16.
-- **Clean-room.** The request format follows a published API specification; nothing from any other system's outputs
-  is used in any step ([16](docs/guide/16-provenance-licences-and-responsible-use.md)).
+- **Clean-room.** The request format follows a published API specification. Nothing from any other system's outputs is
+  used in any step ([16](docs/guide/16-provenance-licences-and-responsible-use.md)).
 - **Model origin.** Every model in every role — backbone, teacher, baseline — is Google's Gemma 4.
 
 ## Licence and citation
 
-Code and head weights: [Apache-2.0](LICENSE). The base model, Gemma 4, is released by Google DeepMind under
-Apache-2.0; see its [model card](https://huggingface.co/google/gemma-4-E4B-it) for its terms. Datasets keep their own
-licences ([14. Datasets](docs/guide/14-datasets.md)), and the attributions they require are in [NOTICE](NOTICE).
+Code and head weights: [Apache-2.0](LICENSE). The base model, Gemma 4, is released by Google DeepMind under Apache-2.0.
+Its [model card](https://huggingface.co/google/gemma-4-E4B-it) gives its terms. Datasets keep their own licences
+([14. Datasets](docs/guide/14-datasets.md)), and the attributions they require are in [NOTICE](NOTICE).
 
 If you use DecisiveLM, please cite:
 
@@ -185,5 +190,5 @@ If you use DecisiveLM, please cite:
 ```
 
 The review-readiness measures follow Alhasan, Diaz Monfort & Richardson, *Knowing which responses to check* (under
-review). A [CITATION.cff](CITATION.cff) file gives the same entry; when the companion paper is on arXiv, cite it
+review). A [CITATION.cff](CITATION.cff) file gives the same entry. When the companion paper is on arXiv, cite the paper
 instead.

@@ -198,20 +198,22 @@ the budget is reached, and a request over budget runs alone.
 | A GPU with 24 GB or more, E4B | the defaults, `--max-tokens 8192` with checkpointing. A 300-item fine-tune peaked at 21.2 GiB with them, and at 16.7 GiB with `--max-tokens 2048`, which was also faster (0.72 s a row against 1.14) |
 | A GPU shared with other work | `--max-tokens 2048` |
 | Apple silicon with large unified memory, E4B | `--no-checkpointing --max-tokens 2048`: one request per micro-batch. Time per row grows with its length: about 0.14 s for short messages, about 2 s for the coding study's longer rows. |
+| Apple silicon, 26B A4B | not measured for fine-tuning. Answering with the 26B A4B head fits in 96 GB or more of unified memory (58.6 GiB at the peak, section 2.1) |
 
 On an NVIDIA GPU, `train_p3.py` and `predict_bundle.py` print PyTorch's peak memory at the end of a run. The GPU needs
 about 0.7 GiB more for the CUDA context.
 
-Packing several requests into a long micro-batch saves little, because the attention mask is dense and the full
-square of the sequence is computed. Turning off checkpointing on a large micro-batch multiplies memory several times
-over.
+Packing several requests into a long micro-batch saves little, because the attention mask is dense and the full square
+of the sequence is computed. Turning off checkpointing on a large micro-batch multiplies memory several times over. An
+8,192-token E4B micro-batch without checkpointing needed more than 180 GB on Apple silicon.
 
-**26B A4B.** The larger backbone needs about 50 GB for its weights. Train it with `--backbone 26b-a4b
---standardize-rows 2000 --dtype float32`. The default compute type is bf16 (16-bit floating point), and
-`--dtype float32` runs every matrix multiplication in fp32 (32-bit) instead. The fp32 compute keeps expert routing
-stable when requests are packed differently. The weights stay in bf16, the checkpoint's own precision, so converting
-them to fp32 is exact. Caching 26B A4B features took 0.51 s a row in fp32 against 0.16 in bf16, about three times as
-long (`results/invariance.md`). A 26B A4B bundle cannot take audio.
+**26B A4B.** The larger backbone needs about 50 GB for its weights. Train it with
+`--backbone 26b-a4b --standardize-rows 2000 --dtype float32`. The default compute type is bf16 (16-bit floating point),
+and `--dtype float32` runs every matrix multiplication in fp32 (32-bit) instead. The fp32 compute keeps expert routing
+(which 8 of the 128 experts each token goes through, chapter 2) stable when requests are packed differently. The weights
+stay in bf16, the checkpoint's own precision, so converting them to fp32 is exact. Caching 26B A4B features took 0.51 s
+a row in fp32 against 0.16 in bf16, about three times as long (`results/invariance.md`). A 26B A4B bundle cannot take
+audio.
 
 **What P3 writes.**
 
@@ -253,9 +255,9 @@ and `1e-3`. As with a P1 warm start (§9.5), the defaults knock the general head
 before your labels can guide them.
 
 **From the 26B A4B head.** Use `--backbone 26b-a4b --dtype float32 --init-bundle bundles/decisivelm-26b-a4b-general`
-with the same learning rates. The fine-tune computes in float32 (section 9.5) and needs a GPU with about 72 GB free for
-the head itself. Memory for a fine-tune has not been measured (training the 26B A4B head on its full mix peaked at 67.6
-GB with 4,096-token micro-batches). The comparison below was run with the E4B head only. Whether the 26B A4B head is a
+with the same learning rates. The fine-tune computes in float32 (section 9.5) and needs a GPU with about 72 GiB free for
+the head itself. Memory for a fine-tune has not been measured (training the 26B A4B head on its full mix peaked at 66.0
+GiB with 4,096-token micro-batches). The comparison below was run with the E4B head only. Whether the 26B A4B head is a
 better starting point than the base model (release criterion 8) has not yet been measured. It is scheduled for 7 to 8
 November 2026, and until then use the E4B head or the base model if you need a result you can rely on.
 
@@ -432,8 +434,9 @@ uv run python scripts/eval_dataset.py --data data/processed/my_task.jsonl --refe
 - P0's prompt places the image or clip where the state starts, as the fine-tune's input does.
 
 Three public examples show what to expect. Each has many raters per item, so the targets carry real disagreement. "The
-general head" in these examples is the released E4B head (General v5c). None has been run from the 26B A4B head. On the
-test split, seed 0 (the 300-item runs were repeated on two more seeds, each with its own 300 items):
+general head" in these examples is the released E4B head (General v5c). None has been run from the 26B A4B head. None of
+the three tasks is in General v5c's mix, whose only image set is VizWiz-VQA and which has no audio. On the test split,
+seed 0 (the 300-item runs were repeated on two more seeds, each with its own 300 items):
 
 | Example | Raters | P0 | 300 items, from base | 300 items, from the general head | All items, from base | All items, from the general head |
 |---|---|---|---|---|---|---|
@@ -441,11 +444,14 @@ test split, seed 0 (the 300-item runs were repeated on two more seeds, each with
 | Voice emotion (CREMA-D), accuracy / ρ | ~10 per clip | 0.551 / 0.01 | 0.577 / 0.11 | 0.605 / 0.13 | **0.755** / **0.51** | 0.734 / 0.48 |
 | Is it alive? (THINGSplus), MAE / ρ | ~37 per object | 0.365 / 0.48 | 0.239 / 0.50 | 0.177 / 0.64 | 0.186 / 0.61 | **0.162** / **0.67** |
 
-ρ is the correlation of the top probability with per-item rater agreement (chapter 11). What they show:
+MAE is the mean absolute error, the mean distance in levels between the predicted score and the raters' mean level
+(lower is better). ρ is the correlation of the top probability with per-item rater agreement (chapter 11). What they
+show:
 
-- **Prompted, the base model barely does these tasks.** On photo quality it beats always answering the most common
-  level, but its confidence hardly follows the raters' agreement. On voice emotion it answers "neutral" for 91% of
-  clips, with confidence unrelated to the listeners' agreement.
+- **Prompted, the base model barely does two of these tasks.** On photo quality it beats always answering the most
+  common level, but its confidence hardly follows the raters' agreement. On voice emotion it answers "neutral" for 91%
+  of clips, with confidence unrelated to the listeners' agreement. It does better on the living-thing rating, where its
+  ρ (0.48) is close to the 300-item fine-tune from base (0.50), though its MAE is higher (0.365 against 0.239).
 - **With enough items, a fine-tune learns them**, and its confidence follows where people disagree. With all the
   items, the starting point matters less. The fine-tune from the base model is best on voice emotion and photo quality,
   and the one from the general head on the living-thing task.

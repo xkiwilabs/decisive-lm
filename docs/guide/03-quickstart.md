@@ -8,7 +8,8 @@ response. It ends with running a head over a whole file of requests. It assumes 
 
 There are two general heads: `decisivelm-e4b-general` for Gemma 4 E4B, and `decisivelm-26b-a4b-general` for Gemma 4 26B
 A4B. This chapter uses the E4B head, which runs on a 24 GB GPU and is the faster of the two. Section 7.10 helps you
-choose. Each head is published on Hugging Face as a bundle, a directory of three files:
+choose. Each head is published on Hugging Face as a bundle, a directory of three files (the download also holds the
+model card, as `README.md`):
 
 | File | Contents |
 |---|---|
@@ -31,8 +32,9 @@ place of `bundles/decisivelm-e4b-general`.
 To use the 26B A4B head instead, download `xkiwilabs/decisivelm-26b-a4b-general` into
 `bundles/decisivelm-26b-a4b-general` and load that directory in the examples below. It has the same three files and the
 same calls, except that `load_backbone` and `load_image_processor` take `"26b-a4b"` where the examples pass `"e4b"`. It
-computes in float32 (the bundle sets this), so it needs a GPU with about 72 GB free and takes about 0.47 s for a
-20-block request over HTTP, against about 0.10 s for the E4B head. It accepts text and images but not audio
+computes in float32 (the bundle sets this), so it needs a GPU with about 72 GiB free or a Mac with 96 GB or more of
+unified memory. On the GPU it takes about 0.47 s for a 20-block request over HTTP, against about 0.10 s for the E4B
+head, and on an M5 Max about 1.9 s for a request of 500 to 1,600 tokens. It accepts text and images but not audio
 ([model card](../model-card-26b.md)).
 
 ## 3.2 Load the model
@@ -91,8 +93,8 @@ print(answer["choice"], answer["confidence"])
 print(answer["probabilities"])
 ```
 
-`system_one` validates the request, builds the input, runs one forward pass and returns a dictionary. With the values
-shown purely as an illustration:
+`system_one` validates the request, builds the input, runs one forward pass and returns a dictionary. The values shown
+are from the E4B head on Apple silicon, and yours may differ in the last digits:
 
 ```python
 {
@@ -101,11 +103,11 @@ shown purely as an illustration:
         "department": {
             "type": "choice",
             "choice": "technical",
-            "confidence": 0.94,
-            "probabilities": {"billing": 0.01, "technical": 0.96, "sales": 0.03},
+            "confidence": 0.98,
+            "probabilities": {"billing": 0.007, "technical": 0.986, "sales": 0.007},
         }
     },
-    "usage": {"input_tokens": 118, "blocks": 3, "latency_ms": 85.0,
+    "usage": {"input_tokens": 74, "blocks": 3, "latency_ms": 58.4,
               "confidence_method": "peak", "adapter": "decisivelm-e4b-general"},
 }
 ```
@@ -114,10 +116,11 @@ shown purely as an illustration:
 - `choice` is the most probable option.
 - `confidence` is a 0–1 summary of how peaked the distribution is: 1 means all the probability is on one option, 0
   means it is spread evenly (section 3.6). It is not the chance that the answer is right. That chance is the top
-  probability, 0.96 here, once the head is calibrated for the task (section 3.6).
-- `usage` reports the number of input tokens, the number of answer blocks (one per option here), the time taken, the
-  confidence method and the head's name (its bundle directory). In Python the optional request field `model` is
-  echoed back unchanged. Over HTTP it chooses the head that answers (section 4.10).
+  probability, 0.986 here, once the head is calibrated for the task (section 3.6).
+- `usage` reports the number of input tokens, the number of answer blocks (one per option here), the time taken (the
+  first request after loading takes several times longer), the confidence method and the head's name (its bundle
+  directory). In Python the optional request field `model` is echoed back unchanged. Over HTTP it chooses the head that
+  answers (section 4.10).
 
 ## 3.4 Several questions at once
 
@@ -151,20 +154,20 @@ request = {
 response = dlm.system_one(request)
 ```
 
-The three answer types come back in different shapes:
+The three answer types come back in different shapes (values again from the E4B head):
 
 ```python
-response["answers"]["is_urgent"]     # {"type": "noul", "noul": 0.97}
-response["answers"]["frustration"]   # {"type": "score", "score": 1.12, "confidence": 0.67,
+response["answers"]["is_urgent"]     # {"type": "noul", "noul": 0.79}
+response["answers"]["frustration"]   # {"type": "score", "score": 0.62, "confidence": 0.39,
                                      #  "legend": {"0": "Calm, just stating facts", "1": "Frustrated but civil",
                                      #             "2": "Very angry, strong language"},
-                                     #  "probabilities": {"0": 0.05, "1": 0.78, "2": 0.17}}
+                                     #  "probabilities": {"0": 0.39, "1": 0.59, "2": 0.01}}
 ```
 
 - **Noul**: `noul` is the probability that the statement is true. There is no separate confidence, because the
   probability itself says how sure the model is.
 - **Score**: `probabilities` is over the levels, numbered from 0 in the order you listed them. `score` is the expected
-  level, Σ level × probability, so it can fall between levels (1.12 here). `legend` maps each level number back to its
+  level, Σ level × probability, so it can fall between levels (0.62 here). `legend` maps each level number back to its
   description.
 
 The question names (`department`, `is_urgent`, `frustration`) are keys for you. The model never sees them, so the
@@ -210,11 +213,11 @@ dlm.confidence_method = "entropy"
 The method in use is reported in `usage.confidence_method`.
 
 **Which number to threshold.** To choose the answers a person should check, rank them by the top probability,
-`max(probabilities.values())`. The top probability is the chance that the answer is right, calibrated on human labels
-(on a new task, after the step in section 10.6), and it is the signal chapters 10 and 11 measure. For one question,
-`peak` ranks answers in the same order, because it rescales the top probability by the number of options. Across
-questions with different numbers of options the two rank differently, and only the top probability keeps its calibrated
-meaning. For a Noul, rank by `max(noul, 1 − noul)`. Chapter 7 explains how to pick a review threshold.
+`max(probabilities.values())`. The top probability is the chance that the answer is right once the head is calibrated on
+human labels (for a new task, after the step in section 10.6), and it is the signal chapters 10 and 11 measure. For one
+question, `peak` ranks answers in the same order, because it rescales the top probability by the number of options.
+Across questions with different numbers of options the two rank differently, and only the top probability keeps its
+calibrated meaning. For a Noul, rank by `max(noul, 1 − noul)`. Chapter 7 explains how to pick a review threshold.
 
 ## 3.7 Images
 
@@ -234,8 +237,10 @@ response = dlm.system_one({
 ```
 
 `DecisiveLM.load` sets up the backbone's image processor. After `attach_bundle`, set it yourself:
-`dlm.image_processor = decisivelm.model.load_image_processor("e4b")` and `dlm.media_root`. Each image is encoded at a
-fixed budget of 280 image tokens. Image URLs are refused. Download the image and pass it as a path or as `data`.
+`dlm.image_processor = decisivelm.model.load_image_processor("e4b")` and set `dlm.media_root` to the folder that
+relative image paths resolve against. Each image is encoded at a fixed budget of image tokens, the head's own (280 for
+both general heads) or the backbone profile's 280 for a head that records none (section 4.5). Image URLs are refused.
+Download the image and pass it as a path or as `data`.
 
 Zero-shot on one image set, CIFAR-10H (small photos of ten kinds of object, each labelled by about 51 people), the E4B
 general head was more accurate than the prompted base model (0.909 against 0.875), and its confidence was closer than

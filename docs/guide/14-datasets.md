@@ -101,8 +101,8 @@ stay under `data/raw/` and are never redistributed.
 ### Zero-shot image check
 
 One more multi-rater image set is held out from every mix and from every fine-tune example. It checks whether the
-general head's confidence follows human disagreement on a kind of image it was not trained on. Both released heads were
-trained only on VizWiz-VQA's photo questions. The E4B head was checked on this set
+general head's confidence follows human disagreement on a kind of image it was not trained on. Of images, both released
+heads were trained only on VizWiz-VQA's photo questions. The E4B head was checked on this set
 (`results/cifar10h_v5c_zero_shot.md`), and the 26B A4B head has not been. An earlier head, trained on text only, was
 checked the same way (`results/cifar10h_v3d_zero_shot.md`).
 
@@ -112,11 +112,11 @@ checked the same way (`results/cifar10h_v3d_zero_shot.md`).
 
 ### Image and audio for version 1.0
 
-Version 1.0 adds more images and audio to the general head. Three multi-rater sets are its training data, and two more
-are frozen as its image and audio suites, held out of every mix and every user adapter (`configs/holdout.yaml`) before
-any image or audio training. Both heads of the first release already train on 10,000 of VizWiz-VQA's training photos
-(the General v5c mix, [chapter 13](13-how-the-general-head-was-trained.md)), and on none of the audio. As with every
-source, the media stay under `data/raw/` and are never redistributed.
+Version 1.0 will add more images and audio to the general head. Three multi-rater sets are its training data, and two
+more are frozen as its image and audio suites, held out of every mix and every user adapter (`configs/holdout.yaml`)
+before any image or audio training. Both heads of the first release already train on 10,000 of VizWiz-VQA's training
+photos (the General v5c mix, [chapter 13](13-how-the-general-head-was-trained.md)), and on none of the audio. As with
+every source, the media stay under `data/raw/` and are never redistributed.
 
 | Dataset | Source | Licence | Tier | Becomes |
 |---|---|---|---|---|
@@ -124,15 +124,15 @@ source, the media stay under `data/raw/` and are never redistributed.
 | SONYC-UST v2 (Cartwright et al. 2020) | [Zenodo 3966543](https://zenodo.org/records/3966543) | CC BY 4.0 | R | 18,510 ten-second recordings from New York City street sensors; eight Nouls, one per kind of sound (engine, impact machinery, other impacts, powered saw, alert signal, music, human voice, dog), from three volunteers per clip. The SONYC team's own labels and the sensor's location and recording time are never used. SONYC's own splits, with its 2019 test recordings split by sensor into `gold_calib` and `gold_test` |
 | Emozionalmente (Catania et al.) | [Zenodo 6569824](https://zenodo.org/records/6569824) | CC BY 4.0 | R | 6,902 clips of Italian actors; one Choice over seven emotions, from the listeners (about five per clip) who said which emotion they heard. Splits by actor. The listeners' demographics file is never read |
 | TextVQA (Singh et al. 2019), frozen suite | [textvqa.org](https://textvqa.org) | annotations CC BY 4.0; the photos are Open Images, listed as CC BY 2.0 but not warranted per photo | X | The validation questions only: 4,985 questions on 3,161 photos that need reading the text in the photo; the answer as a Choice from ten answerers; split by photo into `gold_calib` (40%) and `gold_test` (60%) |
-| ODAQ (Torcoli et al. 2024), frozen suite | [Zenodo 10405774](https://zenodo.org/records/10405774) | the scores CC BY 4.0; each recording under its own licence | X | 136 conditions of 17 excerpts: an original and a processed version (a codec, a band limit or source separation, or the original again, hidden), with one Score on how good the processed version sounds, over MUSHRA's five bands, from 26 expert listeners. Only excerpts whose audio is CC BY or CC0 are used. The 13 CC BY-NC excerpts are left out. Split by excerpt |
+| ODAQ (Torcoli et al. 2024), frozen suite | [Zenodo 10405774](https://zenodo.org/records/10405774) | the scores CC BY 4.0; each recording under its own licence | X | 136 conditions of 17 excerpts, counted after the CC BY-NC excerpts are left out: an original and a processed version (a codec, a band limit or source separation, or the original again, hidden), with one Score on how good the processed version sounds, over the five bands of MUSHRA (a standard listening test, in which the hidden original checks the listener), from 26 expert listeners. Only excerpts whose audio is CC BY or CC0 are used. The 13 CC BY-NC excerpts are left out. Split by excerpt |
 
 The photo question-answering sets have free-text answers. Each question becomes a Choice with a fixed number of options:
 the four answers given most often (two, yes and no, for a yes/no question). When a question has fewer than four
 different answers, the remaining options are answers to other questions, chosen from those no answerer gave to this one.
 A fixed count keeps the number of options from telling the head how much the answerers disagreed. Answers are compared
 after light normalisation, so "Dakota." and "dakota" are one answer, but "dakota" and "dakota digital" stay two, and the
-head learns to split its confidence between them as the answerers did. A question is left out when its four options
-cover fewer than half of the answerers who gave an answer (`decisivelm/data/converters/vqa.py`).
+head learns to split its confidence between them as the answerers did. A question is left out when its options cover
+fewer than half of the answerers who gave an answer (`decisivelm/data/converters/vqa.py`).
 
 ## 14.4 The frozen held-out suite
 
