@@ -38,3 +38,11 @@ def test_request_losses_average_per_question_then_per_request():
     questions = [("choice", torch.tensor([0.5, 0.5])), ("noul", torch.tensor(1.0)), ("choice", None)]
     per_request = request_losses(logits, leaf_question, request_of_question, questions)
     assert per_request.tolist() == pytest.approx([(1.0 + math.log(2)) / 2])   # request 1 has no target: masked
+
+
+def test_request_losses_of_a_batch_with_no_targets_is_empty():
+    # A packed micro-batch can hold only rows whose questions all lack targets (a mix filtered by question type);
+    # training skips it instead of failing on an empty stack.
+    logits = torch.tensor([0.0, 0.0, 0.0])
+    per_request = request_losses(logits, torch.tensor([0, 0, 1]), torch.tensor([0, 1]), [("choice", None), ("noul", None)])
+    assert per_request.numel() == 0

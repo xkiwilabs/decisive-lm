@@ -1,6 +1,10 @@
 # Backbone profiles (docs/guide/06 §6.9), filled in from config.json at M0 (results/M0.md).
 # Developer and base-model origin are recorded for the model-origin rule (docs/guide/16 §16.2).
 
+# The model-origin rule in code: a backbone or teacher loads only if its developer and base-model origin are both
+# listed here (decisivelm.model.check_origin). Add an organisation only after checking it against the rule.
+approved_origins: [Google DeepMind]
+
 query_token_ids: {choice: 6, score: 7, noul: 8}   # <unused0..2>; never emitted by the tokenizer
 
 backbones:

@@ -41,4 +41,6 @@ def request_losses(logits, leaf_question, request_of_question, questions) -> tor
             continue
         loss = LOSSES[qtype](logits[leaf_question == qi], target.to(logits.device))
         by_request.setdefault(int(request_of_question[qi]), []).append(loss)
+    if not by_request:   # a packed batch of rows whose questions all lack targets: nothing to learn from
+        return logits.new_zeros(0)
     return torch.stack([torch.stack(v).mean() for _, v in sorted(by_request.items())])

@@ -9,7 +9,19 @@ from decisivelm import CONFIGS
 
 
 def backbone_profile(name: str) -> dict:
-    return yaml.safe_load((CONFIGS / "model.yaml").read_text())["backbones"][name]
+    cfg = yaml.safe_load((CONFIGS / "model.yaml").read_text())
+    return check_origin(cfg["backbones"][name], f"backbone {name}", cfg)
+
+
+def check_origin(profile: dict, what: str, cfg: dict | None = None) -> dict:
+    """The model-origin rule (docs/guide/16 §16.2): `profile` unchanged if its developer and base-model origin are
+    both in configs/model.yaml `approved_origins`, else ValueError."""
+    approved = (cfg or yaml.safe_load((CONFIGS / "model.yaml").read_text()))["approved_origins"]
+    for field in ("developer", "base_model_origin"):
+        if profile.get(field) not in approved:
+            raise ValueError(f"{what}: {field} {profile.get(field)!r} is not in configs/model.yaml approved_origins "
+                             "(model-origin rule, docs/guide/16 §16.2)")
+    return profile
 
 
 def hub_kwargs(path: pathlib.Path = CONFIGS / "local.yaml", offline: bool = True) -> dict:

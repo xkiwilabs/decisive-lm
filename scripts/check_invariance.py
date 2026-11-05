@@ -6,9 +6,10 @@
 Per question type and variant (options reversed, for Choice only; another request packed first; one more question;
 `repeat` = the identical pass again, a determinism check): the largest |Δp| per item, answer flips, rank stability of
 the top probability, and churn in the least-confident 20% a human would review. --dtype float32 shows how much is
-bf16 rounding.
+bf16 rounding; --tf32 lets float32 matrix multiplies run in TF32 (10-bit mantissa) for speed, to see what that costs.
+The wall time of all passes is reported, so two runs on the same rows compare speed.
 """
-import argparse, json, pathlib, random
+import argparse, json, pathlib, random, time
 
 import torch
 
@@ -28,9 +29,12 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--dtype", choices=["bfloat16", "float32"], help="default: the dtype the bundle was trained in")
     ap.add_argument("--fp32-router", action="store_true", help="MoE routers in fp32 (decisivelm.model.fp32_routers)")
+    ap.add_argument("--tf32", action="store_true", help="float32 matrix multiplies in TF32 (CUDA)")
     ap.add_argument("--out", type=pathlib.Path)
     a = ap.parse_args()
 
+    if a.tf32:
+        torch.backends.cuda.matmul.allow_tf32 = torch.backends.cudnn.allow_tf32 = True
     calib = json.loads((a.bundle / "calibration.json").read_text())
     profile = backbone_profile(a.backbone)
     if profile["revision"] != calib["backbone"]["revision"]:
@@ -48,10 +52,12 @@ def main():
             by_type.setdefault(q.type, []).append((i, qid))
     lines = [f"{a.bundle.name} on {profile['model_id']}@{profile['revision'][:8]}, "
              + ", ".join(f"{len(c)} {t}" for t, c in by_type.items()) + f" questions from {a.split} (seed {a.seed}), "
-             f"dtype {next(backbone.parameters()).dtype}{f', {routers} routers in fp32' if routers else ''}. "
+             f"dtype {next(backbone.parameters()).dtype}{f', {routers} routers in fp32' if routers else ''}"
+             f"{', TF32 matrix multiplies' if a.tf32 else ''}. "
              "A Noul's answer is yes or no; options are reversed for Choice questions only.", "",
              "| Type | Variant | max \\|Δp\\| | mean | p99 | answer flips | top-p rank ρ | review-set churn (20%) |",
              "|---|---|---|---|---|---|---|---|"]
+    t0 = time.perf_counter()
     for qtype, cases in by_type.items():
         base = [answer_probabilities(dlm, [reqs[i]], 0, qid) for i, qid in cases]
         results = {"repeat": compare(base, [answer_probabilities(dlm, [reqs[i]], 0, qid) for i, qid in cases])}
@@ -66,6 +72,7 @@ def main():
         for name, r in results.items():
             lines.append(f"| {qtype} | {name} | {r['max_dp']:.2e} | {r['mean_dp']:.2e} | {r['p99_dp']:.2e} | "
                          f"{r['flips']} / {r['n']} | {r['top_p_rho']:.4f} | {r['review_churn']:.1%} |")
+    lines += ["", f"All passes took {time.perf_counter() - t0:.0f} s."]
     text = "\n".join(lines)
     print(text)
     if a.out:

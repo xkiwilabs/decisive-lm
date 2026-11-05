@@ -13,6 +13,7 @@ over the feature mask), so it matches what the audio tower returns. Decoding nee
 scipy).
 """
 import base64
+import binascii
 import io
 import pathlib
 from collections.abc import Callable
@@ -69,6 +70,17 @@ class EncodedImage:
             self.pixel_values = self.position_ids = None
 
 
+def _decode(data: str, kind: str) -> io.BytesIO:
+    """Base64 media bytes; a `data:<type>;base64,` prefix is accepted. Not base64 is a ValueError (a 400 in server
+    mode), never garbage passed on to a decoder."""
+    if data.startswith("data:") and "," in data:
+        data = data.split(",", 1)[1]
+    try:
+        return io.BytesIO(base64.b64decode(data, validate=True))
+    except binascii.Error as e:
+        raise ValueError(f"{kind} data is not valid base64 ({e})") from e
+
+
 def load_image(m: Media, root: pathlib.Path | None = None) -> Image.Image:
     """A Media item as an RGB image. `path` is resolved against `root` when relative. URLs are refused here: server
     mode fetches only allow-listed URLs (docs/guide/04 §4.5), and that belongs in the server, not in the model."""
@@ -78,7 +90,11 @@ def load_image(m: Media, root: pathlib.Path | None = None) -> Image.Image:
         p = pathlib.Path(m.path)
         img = Image.open(p if p.is_absolute() or root is None else root / p)
     elif m.data is not None:
-        img = Image.open(io.BytesIO(base64.b64decode(m.data)))
+        try:
+            img = Image.open(_decode(m.data, "image"))
+            img.load()
+        except (OSError, Image.DecompressionBombError) as e:
+            raise ValueError(f"image data is not a readable image ({e})") from e
     else:
         raise ValueError("image URLs must be fetched by the caller (allow-listed in server mode)")
     return img.convert("RGB")
@@ -152,17 +168,21 @@ def load_audio(m: Media, root: pathlib.Path | None = None, sampling_rate: int = 
         import soundfile
         from scipy.signal import resample_poly
     except ImportError as e:
-        raise ImportError("audio needs the `audio` extra: uv sync --extra audio (soundfile, scipy)") from e
+        raise ValueError("audio needs the `audio` extra: uv sync --extra audio (soundfile, scipy)") from e
     if m.type != "audio":
         raise ValueError(f"not an audio item: {m.type}")
     if m.path is not None:
         p = pathlib.Path(m.path)
         source = p if p.is_absolute() or root is None else root / p
     elif m.data is not None:
-        source = io.BytesIO(base64.b64decode(m.data))
+        source = _decode(m.data, "audio")
     else:
         raise ValueError("audio URLs must be fetched by the caller (allow-listed in server mode)")
-    with soundfile.SoundFile(source) as f:
+    try:
+        f = soundfile.SoundFile(source)
+    except (RuntimeError, OSError) as e:   # soundfile.LibsndfileError is a RuntimeError
+        raise ValueError(f"audio is not a readable sound file ({e})") from e
+    with f:
         # Checked from the header before decoding: only the first MAX_AUDIO_SECONDS are read, and an unusual rate
         # (which would make the resampling ratio, and its cost, large) is refused.
         if f.samplerate not in SAMPLE_RATES or not 1 <= f.channels <= 8:

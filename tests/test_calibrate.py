@@ -171,3 +171,10 @@ def test_invert_undoes_a_task_calibrated_readout(qtype):
         assert back.tolist() == pytest.approx(logits.tolist(), abs=1e-4)
     else:
         assert (back - logits).tolist() == pytest.approx([float(back[0] - logits[0])] * 3, abs=1e-4)
+
+
+def test_too_few_calibration_questions_are_warned_about():
+    qs = [_choice(i, [1.0, 0.0, 0.0], [1.0, 0.0, 0.0]) for i in range(30)]
+    with pytest.warns(UserWarning, match="only 30 choice questions") as caught:
+        fit_calibration(qs)
+    assert any("pooled temperature: choice:3-5 (30)" in str(w.message) for w in caught)

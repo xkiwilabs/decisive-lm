@@ -37,6 +37,12 @@ holdouts:
   - dataset: sst5
     adapters: [general, user]
     reason: Research-only calibration check (X tier)
+  - dataset: textvqa
+    adapters: [general, user]
+    reason: Frozen image suite for 1.0 (reading text in photos), chosen before any image training
+  - dataset: odaq
+    adapters: [general, user]
+    reason: Frozen audio suite for 1.0 (audio quality, 26 expert listeners), chosen before any audio training
 
   - dataset: sib200
     adapters: [general]

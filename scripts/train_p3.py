@@ -33,32 +33,40 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", type=pathlib.Path, required=True)
-    ap.add_argument("--backbone", default="e4b")
-    ap.add_argument("--rank", type=int, default=8)
-    ap.add_argument("--alpha", type=float, default=16)
-    ap.add_argument("--dropout", type=float, default=0.05)
-    ap.add_argument("--epochs", type=int, default=2)
-    ap.add_argument("--rows-per-step", type=int, default=16)
-    ap.add_argument("--max-tokens", type=int, default=8192)
-    ap.add_argument("--lr-lora", type=float, default=2e-4)
-    ap.add_argument("--lr-head", type=float, default=1e-3)
-    ap.add_argument("--warmup-frac", type=float, default=0.03)
+    ap.add_argument("--data", type=pathlib.Path, required=True,
+                    help="the rows: trains on train, early-stops on val, calibrates on gold_calib")
+    ap.add_argument("--backbone", default="e4b", help="e4b or 26b-a4b (configs/model.yaml)")
+    ap.add_argument("--rank", type=int, default=8, help="LoRA rank")
+    ap.add_argument("--alpha", type=float, default=16, help="LoRA alpha (the update is scaled by alpha / rank)")
+    ap.add_argument("--dropout", type=float, default=0.05, help="dropout on the LoRA input")
+    ap.add_argument("--epochs", type=int, default=2, help="passes over the train rows (early stopping can end sooner)")
+    ap.add_argument("--rows-per-step", type=int, default=16,
+                    help="requests whose gradients are summed per optimiser step")
+    ap.add_argument("--max-tokens", type=int, default=8192,
+                    help="packed tokens per micro-batch (2048 on a Mac: one request at a time)")
+    ap.add_argument("--lr-lora", type=float, default=2e-4,
+                    help="learning rate of the LoRA weights and query-token rows")
+    ap.add_argument("--lr-head", type=float, default=1e-3,
+                    help="learning rate of the scorer head (keep near 1e-5 with --init-head)")
+    ap.add_argument("--warmup-frac", type=float, default=0.03,
+                    help="share of the steps spent warming the learning rate up")
     ap.add_argument("--no-checkpointing", action="store_true", help="faster when memory allows (e.g. 128 GB unified)")
-    ap.add_argument("--eval-every", type=int, default=40)
-    ap.add_argument("--patience", type=int, default=3)
+    ap.add_argument("--eval-every", type=int, default=40, help="optimiser steps between validation checks")
+    ap.add_argument("--patience", type=int, default=3, help="checks without improvement before stopping")
     ap.add_argument("--init-head", type=pathlib.Path, help="bundle whose scorer.pt warm-starts the head (e.g. P1)")
     ap.add_argument("--init-bundle", type=pathlib.Path, help="start from this bundle's LoRA and head (e.g. a general head)")
     ap.add_argument("--n-train", type=int, help="train on a seeded random sample of this many train rows (--seed)")
-    ap.add_argument("--limit-train", type=int)
+    ap.add_argument("--limit-train", type=int,
+                    help="keep only the first N train rows (a quick test; --n-train samples instead)")
     ap.add_argument("--limit-val", type=int, help="early-stop on a seeded random sample of this many val rows")
-    ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--seed", type=int, default=0, help="seed for sampling, shuffling and initialisation")
     ap.add_argument("--select", choices=["loss", "cal_loss", "acc"], default="loss",
                     help="val criterion for early stopping and the kept adapter (decisivelm.train.val_metrics)")
     ap.add_argument("--predict-best", nargs="*", default=[], choices=["loss", "cal_loss", "acc"],
                     help="also write predictions and a bundle from each of these criteria's best snapshots "
                          "(named <name>_by<criterion>), to compare selection rules on gold_test")
-    ap.add_argument("--name")
+    ap.add_argument("--name",
+                    help="run name for the bundle and predictions (default P3_<data>_<backbone>_r<rank>_seed<seed>)")
     ap.add_argument("--dtype", choices=["bfloat16", "float32"], default="bfloat16",
                     help="backbone compute dtype; float32 removes 26B A4B's routing noise (results/invariance.md)")
     ap.add_argument("--fp32-router", action="store_true", help="MoE routers in fp32 (decisivelm.model.fp32_routers)")
@@ -166,9 +174,15 @@ def main():
             "render_version": RENDER_VERSION, "init_head": str(a.init_head) if a.init_head else None,
             "init_bundle": str(a.init_bundle) if a.init_bundle else None, "n_train": len(train_rows),
             "dtype": a.dtype, "fp32_router": a.fp32_router, "standardize_rows": a.standardize_rows,
-            "data": str(a.data), "adapter_kind": a.adapter, "seed": a.seed, "image_budget": vision.get("image_budget"), "select": criterion, "best_step": best[criterion]["step"],
+            "data": str(a.data), "adapter_kind": a.adapter, "seed": a.seed, "image_budget": vision.get("image_budget"),
+            "question_types": dict(collections.Counter(q.type for r in train_rows for q in r.questions.values())),
+            "select": criterion, "best_step": best[criterion]["step"],
             "best_val": best[criterion]["value"], "best": best, "history": result["history"]}, indent=1))
         print(f"wrote {pred_path.relative_to(REPO)} and {bundle.relative_to(REPO)}/", flush=True)
+    if torch.cuda.is_available():   # what a card must hold: PyTorch's peak, and its cache (nvidia-smi adds the context)
+        print(f"peak GPU memory: allocated {torch.cuda.max_memory_allocated() / 2**30:.1f} GiB, "
+              f"reserved {torch.cuda.max_memory_reserved() / 2**30:.1f} GiB", flush=True)
+
 
 if __name__ == "__main__":
     main()

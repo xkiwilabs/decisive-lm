@@ -48,8 +48,8 @@ again.
 |---|---|
 | `schema_version` | Always `1`. |
 | `id` | Unique row id. Seeded choices (option orderings, sampling) derive from it, so it must be stable. |
-| `lineage` | Where the row came from: `source_dataset`, `source_id` (the item in the source), `family_id` (the leakage unit, §8.4), and for derived rows `parent_id` and `multiplier`. |
-| `license`, `tier` | The source's SPDX licence id and its licence tier (§8.5). Both must match `configs/datasets.yaml`. |
+| `lineage` | Where the row came from: `source_dataset`, `source_id` (the item in the source), `family_id` (the leakage unit, §8.4), and for derived rows (rows made from another row, such as the variants of §8.10) `parent_id` and `multiplier`. |
+| `license`, `tier` | The source's SPDX licence id (the standard short name from the SPDX License List, e.g. `CC-BY-4.0`, or `LicenseRef-<name>` for a licence not on it, such as your own data's) and its licence tier (§8.5). Both must match `configs/datasets.yaml`. |
 | `modality` | Any of `text`, `image`, `audio`. |
 | `language` | A language code (e.g. `en`) or a locale (e.g. `pl-PL`). |
 | `state` | A string or a JSON object. JSON is serialised compactly, in insertion order. |
@@ -72,43 +72,49 @@ Each question may carry a **human** target, a **teacher** target, or both.
 - A human target may record `n_raters`, the number of people who labelled the item. Review-readiness metrics need it
   ([chapter 11](11-evaluation.md)), so record it wherever you know it.
 - A teacher target also records how it was produced: the method, number of orderings, allowed-label mass, teacher model
-  and revision, server version, prompt hash and calibration temperature ([chapter 12](12-teacher-labelling.md)). A
-  question may carry a list of teacher targets when several teachers labelled it.
+  and revision, server version, prompt hash and calibration temperature ([chapter 12](12-teacher-labelling.md)
+  explains each). A question may carry a list of teacher targets when several teachers labelled it. Data with human
+  labels only has no teacher targets, so these fields do not arise.
 
 **Store the raters' label shares, never only the majority vote.** If three of five annotators chose level 3 and one
-each chose levels 2 and 4, the target is `{"2": 0.2, "3": 0.6, "4": 0.2}`. The share is what lets a model's confidence
-follow human disagreement: a model trained on majority votes learns that every item is certain. If each item has a
+each chose levels 2 and 4, the target is `{"2": 0.2, "3": 0.6, "4": 0.2}`. The share lets a model's confidence follow
+human disagreement. A model trained on majority votes learns that every item is certain. If each item has a
 single label, the target is one-hot. For example, `{"billing": 1.0, "technical": 0.0, "sales": 0.0}` with `n_raters`
 left out or set to 1.
 
 Training uses the human target where there is one, and otherwise the teacher target. Calibration and every acceptance
-gate use human targets only.
+gate (a pass-or-fail release criterion for the general head, [chapter 15](15-release-criteria.md)) use human targets
+only.
 
 ## 8.3 Splits
 
 | Split | Used for | Never used for |
 |---|---|---|
-| `train` | Fitting the adapter and the head. | Any reported number. |
-| `val` | Early stopping and choosing between training snapshots. | Calibration, reported results. |
-| `gold_calib` | Fitting temperatures and the Noul bias ([chapter 10](10-calibration.md)). Human labels only. | Training, reported results. |
+| `train` | Fitting the adapter and the scorer. | Any reported number. |
+| `val` | Early stopping (ending training once results on `val` stop improving) and choosing between training snapshots. | Calibration, reported results. |
+| `gold_calib` | Calibration: fitting the temperatures and the Noul bias, which rescale the model's probabilities so that its stated confidence matches how often it is right ([chapter 10](10-calibration.md)). Human labels only. | Training, reported results. |
 | `gold_test` | Every reported result and acceptance gate. Human labels only. | Training, calibration, model selection. |
 | `holdout` | Rows kept out of every training mix (§8.6). | Training. |
 
 `gold_calib` and `gold_test` are split once, from human-labelled data, and are never mixed. A temperature fitted on
 the test rows would make calibration look better than it is.
 
-As a guide for your own data, put about 40% of the human-labelled gold items in `gold_calib` and 60% in `gold_test`.
-Calibration needs at least 100 labelled questions per question type to fit well. A public dataset's own test split
-becomes `gold_calib`/`gold_test` and is never trained on.
+As a guide for your own data, send about 60–70% of labelled items to `train`, 10% to `val` and the rest to the gold
+splits, with about 40% of the gold items in `gold_calib` and 60% in `gold_test`
+([chapter 9](09-fine-tuning-for-your-task.md), section 9.2, gives the full plan). Calibration needs at least 100
+labelled questions per question type to fit well. A public dataset's own test split becomes `gold_calib`/`gold_test`
+and is never trained on.
 
 ## 8.4 Lineage: splitting before multiplying
 
 Splits are assigned at the level of the **source item** and the **schema family** before any data is multiplied.
 
 - A **source item** is one item in the original dataset (`lineage.source_id`).
-- A **schema family** (`lineage.family_id`) is a base question plus every rewording, renaming, coarsening and Noul
-  split made from it. Items that share something a model could memorise share a family. HelpSteer2's responses to
-  the same prompt share one family, for example, so the same prompt is never split across train and test.
+- A **schema family** (`lineage.family_id`) is the unit that must not be split across train and test. Rows that
+  share something a model could memorise share a family. That covers a base question with every rewording, renaming,
+  coarsening and Noul split made from it, and rows that share a source prompt, document, conversation or speaker. A
+  converter chooses the family key. HelpSteer2's responses to the same prompt share one family, for example, so the
+  same prompt is never split across train and test.
 - **Derived rows inherit their parent's split, licence, tier and family.** A row made from a `gold_test` row by
   rewording or subsetting its options is itself `gold_test`.
 
@@ -134,7 +140,7 @@ Every source has an entry in `configs/datasets.yaml` with its SPDX licence id an
 |---|---|---|
 | **R** (release) | Permissive, commercial use allowed, no share-alike (CC0, CC BY, MIT, Apache-2.0, …). | The published general head, task fine-tunes, evaluation. |
 | **S** (share-alike) | CC BY-SA, ODbL, GPL. | Private fine-tunes and evaluation. |
-| **X** (restricted) | Non-commercial, research-only, unclear licence, third-party-copyright media, or containing proprietary-model outputs. | Private experiments and evaluation only; never in released weights. |
+| **X** (restricted) | Non-commercial, research-only, terms that leave it unclear whether use is allowed (a dataset with no licence and no restricting terms is R, section 14.1), third-party-copyright media, or containing proprietary-model outputs. | Task fine-tunes for your own use, private experiments and evaluation. Never in released weights. |
 
 - The tier is derived from the licence (`decisivelm.data.dataset.tier_of`).
 - An entry may place a source in a *more* restrictive tier with an `override` reason. No entry can make a source less
@@ -151,16 +157,20 @@ Mixes are built per tier (`decisivelm.data.mix.MIX_TIERS`):
 | `private` | R, S |
 | `research` | R, S, X |
 
-The general head is trained on a `release` mix only.
+The general head is trained on a `release` mix only. A task fine-tune (`scripts/train_p3.py --adapter user`,
+[chapter 9](09-fine-tuning-for-your-task.md)) is checked against the `research` mix, so it may train on rows of all
+three tiers.
 
-**Private data:** register your own sources in `configs/datasets.local.yaml`. It has the same format, is gitignored and
-is read alongside the public registry. A local entry may add sources but may not redefine a public one.
+**Private data:** register your own sources in `configs/datasets.local.yaml` (section 8.8 shows an entry). It has the
+same format, is gitignored and is read alongside the public registry. A local entry may add sources but may not
+redefine a public one.
 
 ## 8.6 Holdouts
 
 `configs/holdout.yaml` lists data that a training mix must never contain. Each entry names a `dataset`
-(`lineage.source_dataset`) and the `adapters` it is barred from (`general`, `user` or both). It may narrow the holdout
-with selectors: `source_ids`, `family_ids` or `languages`. With no selector, the whole dataset is held out.
+(`lineage.source_dataset`) and the `adapters` it is barred from (`general` for the general head, `user` for a task
+fine-tune, or both). It may narrow the holdout with selectors: `source_ids`, `family_ids` or `languages`. With no
+selector, the whole dataset is held out.
 
 ```yaml
 holdouts:
@@ -182,9 +192,10 @@ held-out suite used for releases is described in [chapter 15](15-release-criteri
 
 ## 8.7 Clean-room inputs
 
-If your data includes logs from another decision service, keep only the **inputs** and relabel them. Never keep that
-service's answers ([chapter 16](16-provenance-licences-and-responsible-use.md) explains why). `decisivelm/data/cleanroom.py`
-enforces this:
+If your data includes logs from another decision service, keep only the **inputs** and relabel them, by people or
+with the teacher pipeline of [chapter 12](12-teacher-labelling.md). Never keep that service's answers
+([chapter 16](16-provenance-licences-and-responsible-use.md) explains why). `decisivelm/data/cleanroom.py` enforces
+this:
 
 - `whitelist_request(log)` keeps only `state`, `questions` and `media` from a logged request and drops everything
   else.
@@ -198,8 +209,27 @@ enforces this:
 
 A converter is a function that reads raw files and returns a list of `Record`s. The built-in converters are in
 `decisivelm/data/converters/`. `helpsteer2.py` (Score questions with rater shares) and `civil_comments.py` (Noul
-questions with rater shares) are good models. A minimal converter for a CSV with one text column and several raters'
-labels:
+questions with rater shares) are good models.
+
+**1. Register the source.** Every row names its source dataset, and the tools refuse a row whose source is not
+registered. A private source goes in `configs/datasets.local.yaml`, which git ignores, so it is never committed.
+Create the file with an entry like this:
+
+```yaml
+version: 1
+datasets:
+  support_tickets:
+    description: Customer-support messages, each labelled by three staff into one of three teams
+    source: Our help desk, exported 2026-10-01
+    license: LicenseRef-private
+    tier: X
+```
+
+`LicenseRef-private` with tier X marks data you cannot publish (section 8.5). It can train your own fine-tunes and is
+kept out of anything released.
+
+**2. Write the converter.** A minimal converter for a CSV with one text column and several raters' labels, saved as
+`data/converters/support_tickets.py` (the `data/` folder is ignored by git, so your converter stays private too):
 
 ```python
 import collections, hashlib, pathlib
@@ -244,15 +274,33 @@ def convert(source_dir, tokenizer=None, max_state_tokens=MAX_STATE_TOKENS):
     return out
 ```
 
+**3. Run it** from the repository root, with your CSV at `data/raw/support_tickets/tickets.csv`:
+
+```bash
+uv run python scripts/convert_dataset.py --converter data/converters/support_tickets.py:convert --name support_tickets
+```
+
+`convert_dataset.py` runs your converter the same way as the built-in ones. It passes the backbone's tokenizer
+(`--backbone`, default `e4b`), checks every row against the registry, writes `data/processed/support_tickets.jsonl` and
+prints the number of rows in each split with a hash of each split's ids. `--raw DIR` reads the raw data from a folder
+other than `data/raw/<name>`.
+
 Guidelines:
 
 - **Truncate with the shared preprocessor.** `truncate_state` keeps the first 70% and last 30% of the token budget
-  around a marker. The teacher labeller uses the same function, so teacher and student see identical text.
+  around a marker. The teacher labeller uses the same function, so teacher and student (the model being trained) see
+  identical text.
 - **Choose the family key carefully.** If several rows share a source document, conversation or prompt, key the split
   on that, not on the row.
 - **Write questions the model can answer one leaf at a time.** Every option is judged alone, without seeing the others
   ([chapter 5](05-writing-good-questions.md)).
-- **Write rows with `model_dump_json(exclude_none=True)`, one per line**, to `data/processed/<name>.jsonl`.
+- **Return the rows; don't write them.** `convert_dataset.py` checks and writes them, so a converter only builds
+  `Record`s.
+- **Give `gold_calib` enough items.** Temperatures are fitted on `gold_calib` and need about 100 questions of each type
+  (chapter 10). The shares above put 12% of items there, which reaches 100 only at about 830 items. A dataset of 200
+  items gets 24. For a smaller dataset, either raise the `gold_calib` share (25% reaches 100 at 400 items) or accept a
+  temperature fitted on fewer questions, which is less certain. Calibration prints a warning when a question type has
+  fewer than 100 questions to fit on.
 
 The public seed datasets are fetched and converted with two commands. `fetch_dataset.py` downloads the files pinned in
 `configs/datasets.yaml` into `data/raw/<name>/`, with a sha256 manifest. `convert_dataset.py` runs the registered
@@ -269,15 +317,18 @@ uv run python scripts/convert_dataset.py banking77
 uv run python scripts/inspect_data.py data/processed/support_tickets.jsonl
 ```
 
-This prints rows per split, questions per type, a Choice option-count histogram by calibration bucket, Score level
+This prints rows per split, questions per type, a Choice option-count histogram by calibration bucket (the
+option-count groups 2, 3–5, 6–15, 16–63 and 64–255 that get their own temperature, section 6.5), Score level
 counts, the spread of Noul targets, whether each question has a human target, a teacher target or none, media counts,
 and the truncation rate. Rows are loaded through the licence check, so a file that disagrees with the registry fails
 here first.
 
 ## 8.10 Multiplying data: schema explosion
 
-One labelled item can teach many question schemas. `scripts/explode.py` derives new rows from a Choice question
-without a teacher. It keeps the state and the human label and changes only the schema:
+One labelled item can teach many question schemas (versions of a question with a different option set, or recast as
+Nouls). `scripts/explode.py` derives new rows from a Choice question without a teacher. It keeps the state and the
+human label and changes only the question. The general head was trained on such rows so that it answers option sets
+of every size, not only a dataset's full list, and recognises when no listed option fits (chapter 13, section 13.3).
 
 ```bash
 uv run python scripts/explode.py data/processed/banking77.jsonl --question intent
@@ -285,10 +336,12 @@ uv run python scripts/explode.py data/processed/banking77.jsonl --question inten
 
 For each row it writes:
 
-- **Subsets** (`--subsets`, default 2): every option with target mass plus a random number of distractors, up to
-  `--max-k` (default 60), with the target renormalised.
-- **Drop-gold plus `other`:** the gold option and its most confusable options are removed, and a self-contained
-  `other` option is added that names what the kept options cover, so the answer becomes `other`. One-hot targets only.
+- **Subsets** (`--subsets`, default 2): the same question with fewer options. A subset keeps every option that has
+  some of the target probability (target mass) and adds a random number of the other options (distractors), up to
+  `--max-k` (default 60). The target is rescaled to sum to 1 over the kept options.
+- **Drop-gold plus `other`:** the gold option (the labelled answer) and the two options whose descriptions share the
+  most words with it (its most confusable options) are removed, and a self-contained `other` option is added that
+  names what the kept options cover, so the answer becomes `other`. One-hot targets only.
 - **Noul splits** (`--nouls`, default 2): "is the answer X?" Nouls, about 40% of them positive.
 
 The output, `data/processed/<name>_explode.jsonl`, keeps every row's split, tier and family, and records

@@ -99,6 +99,15 @@ def fit_calibration(qs: list[QuestionLogits], lo: float = 0.25, hi: float = 20.0
         group = [q for k, g in groups.items() if k.startswith(qtype + ":") for q in g]
         if group:
             calib.temperatures[f"{qtype}:*"] = grid_fit(f"{qtype}:*", group)
+    for qtype in ("choice", "score", "noul"):
+        n = sum(len(g) for k, g in groups.items() if k.split(":")[0] == qtype)
+        if 0 < n < MIN_BUCKET:
+            warnings.warn(f"calibration: only {n} {qtype} questions to fit on; with fewer than {MIN_BUCKET} the "
+                          f"temperature is noisy and the reported calibration error uncertain (docs/guide/10)")
+    if pooled := {k: len(g) for k, g in groups.items() if k != "noul" and len(g) < min_bucket}:
+        listed = ", ".join(f"{k} ({n})" for k, n in sorted(pooled.items()))
+        warnings.warn(f"calibration: buckets with fewer than {min_bucket} questions take their type's pooled "
+                      f"temperature: {listed}")
     for k, group in groups.items():
         if k != "noul" and len(group) < min_bucket:
             calib.temperatures[k] = calib.temperatures[f"{k.split(':')[0]}:*"]

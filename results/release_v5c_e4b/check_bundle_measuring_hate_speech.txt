@@ -1,0 +1,6 @@
+[coord] held gpu0 as decisive-lm-57 (pid 2300565)
+Loading weights:   0%|          | 0/2076 [00:00<?, ?it/s]Loading weights:  36%|███▋      | 754/2076 [00:00<00:00, 7177.20it/s]Loading weights:  71%|███████   | 1472/2076 [00:00<00:00, 2004.81it/s]Loading weights: 100%|██████████| 2076/2076 [00:00<00:00, 3021.08it/s]
+3384 rows, 33840 questions: answer agrees on 33205; max |Δp| = 1.97e-02; last latency 61.6 ms for 573 tokens, 46 blocks
+conformance: 100%
+agreement with the written predictions (bfloat16, tolerance 0.1): passes
+[coord] released gpu0 (exit 0)

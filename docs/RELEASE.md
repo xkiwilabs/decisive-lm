@@ -299,3 +299,90 @@ repository (`decisive-lm-data`), tagged `vX.Y` like the model, or links to where
   it is rated, with Wikipedia Toxicity, Humicroedit and the sarcasm corpus as development checks. The first
   candidate, General v4a, is v3d's recipe plus both sources, with Measuring Hate Speech capped at 6,000 comments
   (about a fifth of the Score questions) so the head is not tilted towards hate speech.
+- 2026-10-30: **the first public release carries two heads, on E4B and on 26B A4B** (the owner's decision), trained
+  on the same mix so they can be compared row for row: **General v5c**, v3d's mix plus 10,000 VizWiz-VQA photos
+  (whether a blind user's photo can answer their question, and the answer). It leaves out the two same-task sources
+  that 0.2 adds (HelpSteer2-Preference and Measuring Hate Speech's training portion), so on this release's suite
+  reports every suite task is still unseen. It leaves out the audio sets too, because 26B A4B takes no audio. How the
+  criteria read with two heads, written before either head was trained:
+  - each head is its own candidate, scored on the suite once, and released only if it passes;
+  - **P0 is the candidate's own backbone prompted** ("better off than if they had prompted the base model it is
+    built on"): E4B for the E4B head, 26B A4B for the 26B head, for which P0 and the teacher are then the same model
+    (`scripts/score_suite.py` reads the backbone from the bundle);
+  - **criterion 4's reference is the same E4B specialists for both heads** (`configs/release_seeds.yaml`): the bar is
+    the same for both, and training six 26B specialists would take days of GPU time;
+  - the 26B head runs with fp32 computation (bf16 weights) in training, checks and serving: in bf16, its expert
+    routing changes 19–22% of answers when only the packing of a request changes (`results/invariance.md`), which
+    would fail criterion 5.
+- 2026-11-03: **the E4B v5c head is released although it fails three checks of 0.x, with each failure stated** (the
+  owner's decision, made after its suite result was seen; `results/suite_general_v5c_e4b_r8_seed0.md`). Like v3d's
+  (2026-10-27), this is an exception to "released only if it passes", for this head only. The failures, each
+  compared with P0:
+  - criterion 1 on Measuring Hate Speech's Scores, the failure v3d had and larger: ρ(top p, agreement) Δ
+    [−0.138, −0.110] (v3d [−0.072, −0.047]) and tie AUROC Δ [−0.055, −0.037]. Its errors caught in review are no
+    longer worse;
+  - criterion 2 on Measuring Hate Speech's Noul: Brier after calibration is 0.154, above the uncalibrated 0.147,
+    although it stays below P0's 0.209;
+  - criterion 4 on HelpSteer2: ECE 0.123 against the specialist's 0.105, significantly higher (Δ [+0.005, +0.028]).
+
+  **Why.** The two-sided human ratings planned for 0.2 are the route to the first failure. Three earlier attempts to
+  fix it from the mix failed (v3f, v3g, and a mix without the teacher's Score labels,
+  `results/probe_v5c_nts.md`). The other two failures are small, and the head adds photos.
+
+  **What was not done:** no other seed was scored on the suite, and its calibration was not changed and rescored.
+  Either would choose a candidate by its suite result. The 26B head is scored by the same rule. Whether it ships if
+  it fails is decided when its result is in.
+- 2026-11-04: **the first public release, 0.1, is the v5c heads** (the owner's decision): the E4B head, released
+  under the 2026-11-03 entry, and the 26B A4B head, decided under the same rule once it is scored. The 2026-10-27
+  entry froze v3d "as 0.1", but the repository has never been public and has no tags, so v3d was an earlier
+  candidate that was never published; it is not a release. The E4B head ships in 0.1 without audio training.
+- 2026-11-05: **the 26B A4B v5c head is released although it fails five checks of 0.x, with each failure stated**
+  (the owner's decision, made after its suite result was seen; `results/suite_general_v5c_26b-a4b_r8_seed0.md`,
+  `results/general_v5c_26b.md`). Like the E4B head's (2026-11-03), this is an exception to "released only if it
+  passes", for this head only. Its P0 is the 26B A4B prompted, which is also the teacher. The failures, each compared
+  with P0:
+  - criterion 3 on MASSIVE: accuracy 0.680 against 0.731, Δ [−0.055, −0.046];
+  - criterion 1 on Measuring Hate Speech's Scores: errors caught in a 20% review 0.234 against 0.267, Δ
+    [−0.040, −0.025], and the lowest within-category ρ(top p, agreement) −0.205 against −0.175 (44 categories);
+  - criterion 1 on HelpSteer3's Score: the lowest within-category ρ −0.038 against −0.011 (6 categories);
+  - criterion 2 on Measuring Hate Speech's Scores: Brier after the per-task step 0.6403, above the 0.6399 before it,
+    Δ [+0.0002, +0.0006].
+
+  **Why.** It improves on the E4B head on every suite task's primary metric, and on Measuring Hate Speech's Scores
+  its review readiness now beats P0's (ρ 0.177 against 0.162, Δ [+0.001, +0.029]), the check the E4B head and v3d
+  failed. It fails more checks than the E4B head because its P0 is a much stronger model. The accuracy losses are
+  stated beside the gains: MASSIVE (5 points), four of the seven benchmarks (2–4 points) and Humicroedit.
+
+  **What was not done:** no other seed was trained or scored, and its calibration was not changed and rescored. Its
+  latency (473 ms p50 over HTTP on a 20-block request, `results/general_v5c_26b.md`) is about 4.6 times the E4B
+  head's 102 ms; it is reported, not gated.
+- 2026-11-05: **`helpsteer3-train-34503` is added to the suite exclusions** (the owner's decision;
+  `results/suite_overlap_v5c.md`): its text overlaps HelpSteer2-Preference, which 0.2 trains on. Both v5c heads were
+  scored before the change, on 5,966 HelpSteer3 rows; later candidates are scored on 5,965. No v5c row overlaps
+  anything v5c trains on, so their results are unaffected.
+- 2026-11-05: **three rules for the candidates after 0.1**, the owner's decisions, written before any run they apply
+  to was trained or scored:
+  - **criterion 4 for a 26B A4B candidate** is judged against specialists trained on the 26B A4B backbone: one per
+    seed dataset (six), in float32 computation, with the recipe of the E4B specialists, seed 0. This replaces the
+    2026-10-30 reading (the same E4B specialists for both heads), because a candidate's reference should be built on
+    its own backbone, as its P0 is. The result against the E4B specialists is reported beside it. The 0.1 26B head is
+    scored against the new specialists too, reported and not gated;
+  - **criterion 2's per-task step gets a guard** (`scripts/score_suite.py --task-guard`). On each set, every method
+    (the candidate, P0 and the teacher alike) keeps, per question type, whichever form of its answers has the lowest
+    Brier on the step's 100 rows: before any calibration, calibrated, or calibrated and scaled (that last form's Brier
+    cross-validated over five folds of the 100 rows, since it is fitted on them). The step's own form is kept unless
+    another is strictly lower. A user with 100 labelled items can make the same check. Why: both v5c heads failed
+    criterion 2 on Measuring Hate Speech because calibration left Brier slightly worse than none. On the E4B head's
+    Noul the cause is the general calibration, which the step does not touch; on the 26B head's Scores, it is the
+    general calibration plus the step. The guard is adopted only if, on the development sets (MultiNLI, Wikipedia
+    toxicity, Humicroedit, CSC sarcasm, VizWiz-VQA and the seven benchmarks), for both v5c heads and both P0s, it
+    raises no task's Brier after the step by more than 0.002 and no task's ECE after the step by more than 0.01,
+    compared with the step without it. The check and its result are recorded here before any 0.2 candidate is
+    scored;
+  - **MASSIVE stays unseen**: no training mix includes MASSIVE rows, so the suite keeps measuring transfer to
+    languages the head was not trained on. Non-English training data comes from other human-labelled sources.
+- 2026-11-05: **the per-task step's guard is not adopted.** It failed the development check set above
+  (`results/task_guard_dev.md`): it raised ECE after the step by up to 0.072 and Brier by up to 0.019, against limits
+  of 0.01 and 0.002. On Wikipedia toxicity it made the E4B head's Brier worse, not better. With 100 rows, the choice
+  between forms follows noise. Criterion 2's per-task step stays as written above, and the two v5c heads' Brier
+  failures stand as stated.

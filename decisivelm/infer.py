@@ -6,6 +6,7 @@ decisivelm.media).
 import json
 import pathlib
 import time
+import warnings
 
 import torch
 
@@ -21,6 +22,15 @@ from decisivelm.tree import Question, TreeRequest, attention_masks, hf_masks, pa
 QUERY_IDS = {"choice": 6, "score": 7, "noul": 8}   # <unused0..2>, configs/model.yaml
 
 
+class RequestTooLarge(ValueError):
+    """A request whose packed tree is longer than the caller's `max_tokens` (decisivelm.serve answers 413)."""
+
+
+def tree_tokens(tree: TreeRequest) -> int:
+    """Tokens in a request's packed sequence: the prefix (media included), each question segment and each leaf."""
+    return len(tree.prefix) + sum(len(q.segment) + sum(len(leaf) for leaf in q.leaves) for q in tree.questions)
+
+
 def serialize_state(state) -> str:
     """Strings as they are; JSON compactly in insertion order, identically for teacher and student (docs/guide/04 §4.6)."""
     return state if isinstance(state, str) else json.dumps(state, ensure_ascii=False, separators=(",", ":"))
@@ -30,11 +40,12 @@ class DecisiveLM:
     def __init__(self, backbone, tokenizer, scorer: Scorer, calibration: Calibration | None = None,
                  query_ids: dict[str, int] = QUERY_IDS, confidence_method: str = "peak", adapter: str | None = None,
                  max_state_tokens: int = MAX_STATE_TOKENS, image_processor=None, image_budget: int = DEFAULT_BUDGET,
-                 media_root: pathlib.Path | None = None, feature_extractor=None):
+                 media_root: pathlib.Path | None = None, feature_extractor=None, trained_types: set[str] | None = None):
         """`backbone` is a Gemma4Model or Gemma4TextModel: anything that returns last_hidden_state
         and accepts per-layer-type masks plus position_ids. Never the lm_head wrapper (docs/guide/06 §6.4).
         Images need a Gemma4Model and its processor's `image_processor`, audio its `feature_extractor` (E4B only);
-        relative media paths resolve against `media_root`."""
+        relative media paths resolve against `media_root`. A question of a type outside `trained_types` (the bundle's,
+        decisivelm.bundle.trained_types) is answered with a warning: the head has never learned that type."""
         self.backbone, self.tokenizer, self.scorer = backbone, tokenizer, scorer
         self.calibration = calibration or Calibration()
         self.query_ids, self.confidence_method, self.adapter = query_ids, confidence_method, adapter
@@ -45,6 +56,7 @@ class DecisiveLM:
         self.image_tokens = ImageTokens.from_config(backbone.config)
         self.image_processor, self.image_budget, self.media_root = image_processor, image_budget, media_root
         self.audio_tokens, self.feature_extractor = AudioTokens.from_config(backbone.config), feature_extractor
+        self.trained_types = trained_types
 
     @staticmethod
     def load(bundle, **kwargs) -> "DecisiveLM":
@@ -61,8 +73,8 @@ class DecisiveLM:
         for m in req.media:
             if m.type == "audio":
                 if self.audio_tokens is None or self.feature_extractor is None:
-                    raise ValueError("this DecisiveLM has no audio path: pass a Gemma4Model with an audio tower and "
-                                     "its feature_extractor")
+                    raise ValueError("this model takes no audio: its backbone has no audio input (26B A4B takes text "
+                                     "and images only), or it was loaded without an audio feature_extractor")
                 def encode(m=m):
                     return encode_audio(self.feature_extractor,
                                         load_audio(m, self.media_root, self.feature_extractor.sampling_rate),
@@ -120,11 +132,24 @@ class DecisiveLM:
         scorer_dtype = next(self.scorer.parameters()).dtype
         return tree, self.scorer(q.to(scorer_dtype)).float().cpu()
 
-    def system_one(self, request) -> dict:
+    def system_one(self, request, max_tokens: int | None = None) -> dict:
         t0 = time.perf_counter()
         req = request if isinstance(request, SystemOneRequest) else SystemOneRequest.model_validate(request)
         self.warnings = lint_request(req)
-        tree, logits = self.logits([self._tree(req)])
+        if self.trained_types is not None:
+            for qid, q in req.questions.items():
+                if q.type not in self.trained_types:
+                    trained = ", ".join(sorted(self.trained_types))
+                    message = (f"{qid}: {self.adapter or 'this head'} was never trained on {q.type} questions, so its "
+                               f"answer and confidence are untested; trained on {trained}")
+                    self.warnings.append(message)
+                    warnings.warn(message.split(": ", 1)[1], stacklevel=2)
+        request_tree = self._tree(req)
+        if max_tokens is not None and (n := tree_tokens(request_tree)) > max_tokens:
+            raise RequestTooLarge(f"the request packs to {n:,} tokens, more than this server's {max_tokens:,}: send "
+                                  f"fewer or shorter questions or a shorter state (states are cut at "
+                                  f"{MAX_STATE_TOKENS:,})")
+        tree, logits = self.logits([request_tree])
         conf = METHODS[self.confidence_method]
         answers = {}
         for i, (qid, q) in enumerate(req.questions.items()):

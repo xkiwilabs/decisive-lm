@@ -79,12 +79,21 @@ def fetch_github(f: dict, out: pathlib.Path) -> list[dict]:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("names", nargs="+")
+    ap.add_argument("--jobs", type=int, default=1,
+                    help="URL files downloaded at once (a slow host such as Zenodo can be faster over several)")
+    a = ap.parse_args()
     registry = load_registry()
-    for name in ap.parse_args().names:
+    for name in a.names:
         entry = registry[name]
         out = REPO / "data" / "raw" / name
         out.mkdir(parents=True, exist_ok=True)
         manifest = {"dataset": name, "license": entry["license"], "tier": entry["tier"], "files": []}
+        fetched = set()
+        if a.jobs > 1:
+            urls = [f for f in entry["fetch"] if "url" in f]
+            with concurrent.futures.ThreadPoolExecutor(a.jobs) as pool:
+                list(pool.map(lambda f: fetch_url(f["url"], out / f["file"], f.get("sha256")), urls))
+            fetched = {f["file"] for f in urls}
         for f in entry["fetch"]:
             if "github" in f:   # a pinned commit's matching files (resumable: files already here are kept)
                 files = fetch_github(f, out)
@@ -105,7 +114,8 @@ def main():
                 continue
             dest = out / f["file"]
             if "url" in f:
-                fetch_url(f["url"], dest, f.get("sha256"))
+                if f["file"] not in fetched:
+                    fetch_url(f["url"], dest, f.get("sha256"))
                 source = {"url": f["url"]}
             else:
                 shutil.copy(hf_hub_download(f["hf"], f["path"], repo_type="dataset", revision=f["revision"],

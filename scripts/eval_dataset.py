@@ -131,13 +131,14 @@ def fmt(x):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", type=pathlib.Path, required=True)
+    ap.add_argument("--data", type=pathlib.Path, required=True, help="the rows whose human targets are scored against")
     ap.add_argument("--predictions", nargs="+", required=True, help="NAME=path.jsonl")
-    ap.add_argument("--reference")
-    ap.add_argument("--split", default="gold_test")
-    ap.add_argument("--n-boot", type=int, default=1000)
-    ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--out", type=pathlib.Path)
+    ap.add_argument("--reference",
+                    help="the NAME every other method is compared with (default: the first --predictions)")
+    ap.add_argument("--split", default="gold_test", help="the split to score")
+    ap.add_argument("--n-boot", type=int, default=1000, help="bootstrap resamples for the 95%% CIs")
+    ap.add_argument("--seed", type=int, default=0, help="seed for the bootstrap")
+    ap.add_argument("--out", type=pathlib.Path, help="also write the report to this Markdown file")
     a = ap.parse_args()
 
     rows = [r for r in load_records(a.data) if r.split == a.split]
@@ -154,18 +155,32 @@ def main():
     lines = [f"# {a.data.stem}: {a.split}", "",
              f"{len(rows)} rows{note}. 95% CIs from {a.n_boot} item-level bootstrap resamples; Δ = method minus {ref}.", ""]
     summary = {m: [] for m in methods}
-    for qid, q0 in rows[0].questions.items():
-        names = list(q0.criteria) if q0.type == "choice" else [str(i) for i in range(len(q0.criteria))] \
-            if q0.type == "score" else ["yes"]
+    def option_names(q):
+        return list(q.criteria) if q.type == "choice" else [str(i) for i in range(len(q.criteria))] \
+            if q.type == "score" else ["yes"]
+
+    # Each question id, scored on the rows that ask it; rows whose options differ (a yes/no question beside four-option
+    # ones under the same id) are scored as separate groups.
+    first = {}
+    for r in rows:
+        for qid, q in r.questions.items():
+            first.setdefault((qid, tuple(option_names(q))), q)
+    for k, ((qid, names), q0) in enumerate(first.items()):
+        names = list(names)
+        asked = [r for r in rows if qid in r.questions and option_names(r.questions[qid]) == names]
         other = names.index("other") if q0.type == "choice" and "other" in names else None
-        Q = Question(rows, qid, q0.type, names, other)
+        Q = Question(asked, qid, q0.type, names, other)
         P = {m: Q.probs(load_predictions(path, qid)) for m, path in methods.items()}
-        full = np.arange(len(rows))
+        full = np.arange(len(asked))
+        g = np.random.default_rng([a.seed, k])
+        q_boots = boots if len(asked) == len(rows) else [g.integers(0, len(asked), len(asked)) for _ in range(a.n_boot)]
         res = {m: Q.metrics(p, full) for m, p in P.items()}
         key = PRIMARY[q0.type]
-        bs = {m: np.array([Q.metrics(p, b)[key] for b in boots]) for m, p in P.items()}
+        bs = {m: np.array([Q.metrics(p, b)[key] for b in q_boots]) for m, p in P.items()}
         cols = list(res[ref])
         kind = {"choice": f"choice, {len(names)} options", "score": f"score, {len(names)} levels", "noul": "noul"}[q0.type]
+        if len(asked) < len(rows):
+            kind += f"; asked on {len(asked)} rows"
         lines += [f"## {qid} ({kind})", "",
                   "| Method | " + " | ".join(cols) + f" | {key} 95% CI | Δ{key} vs ref | 95% CI |",
                   "|---|" + "---|" * (len(cols) + 3)]
@@ -178,7 +193,7 @@ def main():
                          + (delta or "— | —") + " |")
             summary[m].append((q0.type, res[m][key]))
         lines.append("")
-    if len(rows[0].questions) > 1:
+    if len(first) > 1:
         lines += ["## Mean of the primary metric over questions", "", "| Method | " +
                   " | ".join(sorted({t for t, _ in summary[ref]})) + " |", "|---|" + "---|" * len({t for t, _ in summary[ref]})]
         for m, v in summary.items():

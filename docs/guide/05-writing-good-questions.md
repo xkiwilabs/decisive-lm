@@ -1,7 +1,7 @@
 # 5. Writing good questions
 
-DecisiveLM answers exactly the questions you write, and nothing else, so the wording of a question decides most of
-how useful its answer is. This chapter is practical guidance for writing questions that work well. Most of it follows
+DecisiveLM answers exactly the questions you write, and nothing else, so the wording of a question decides how useful
+its answer is. This chapter is practical guidance for writing questions that work well. Most of it follows
 from one design rule: **every option, level and statement is judged on its own**, together with the state and its
 question's instructions, and never alongside its siblings.
 
@@ -25,7 +25,7 @@ It never sees:
 Chapter [6](06-how-it-works.md) explains the mechanism. In practice it means:
 
 - **The instructions must carry the whole question.** `"department": {"instructions": "Which one?"}` gives the model
-  nothing: it never sees the word "department". Write `"Which team should handle this support message?"`.
+  nothing, because it never sees the word "department". Write `"Which team should handle this support message?"`.
 - **Every description must stand alone.** A description that refers to its neighbours ("as above, but worse", "the
   remaining cases") cannot be understood, because the neighbours are not visible.
 - **Rules shared by all options belong in the instructions.** Precedence rules ("if a response mentions both A and B,
@@ -46,9 +46,10 @@ Some guidance for the borderline cases:
   "between medium and high".
 - **Several labels that can co-occur are several Nouls.** A Choice's probabilities sum to 1, so it cannot say "both".
   If a text can be both a complaint and a question, ask two Nouls.
-- **A yes/no question can be a Noul or a two-option Choice.** Prefer the Noul: it is one block instead of two and
-  returns the probability directly. Use a Choice when the two outcomes are genuinely different categories with their
-  own descriptions (`{"approve": "...", "escalate": "..."}`).
+- **A yes/no question can be a Noul or a two-option Choice.** Prefer the Noul, because it is one block instead of two
+  and returns the probability directly. A block is one unit the model scores, and cost grows with the number of blocks
+  (section 6.1). Use a Choice when the two outcomes are different categories with their own descriptions
+  (`{"approve": "...", "escalate": "..."}`).
 
 ## 5.3 One Choice or a set of Nouls for a codebook
 
@@ -59,11 +60,12 @@ A coding scheme (a codebook) can be asked in two ways:
 2. **One Noul per code** ("The response expresses code A as defined: …"). Each code gets its own probability, and
    several can be high. This fits multi-label coding, and lets you review each code separately.
 
-For a single-label codebook, prefer the Choice:
+For a single-label codebook, prefer the Choice. A Choice turns its options' scores into probabilities with a
+**softmax**, which makes them sum to 1, so a code can gain probability only where the others lose it. The codes are
+weighed against each other, which a set of independent Nouls cannot do. When you use a Choice:
 
 - put the full codebook and its precedence rules in `instructions`;
-- give every option a self-contained definition in its description;
-- the softmax then weighs the codes against each other, which a set of independent Nouls cannot do.
+- give every option a self-contained definition in its description.
 
 ## 5.4 Choice options
 
@@ -142,7 +144,7 @@ down.
 
 ## 5.8 States
 
-- **Text or JSON.** Pass free text as a string. Pass a record as a JSON object; its keys are visible to the model, so
+- **Text or JSON.** Pass free text as a string. Pass a record as a JSON object. Its keys are visible to the model, so
   readable key names help (`"customer_message"`, not `"f3"`).
 - **Length.** States over 8,192 tokens are cut to their first 70% and last 30% of the budget (chapter
   [4](04-requests-and-responses.md), section 4.3). If the important part of a long document sits in the middle,
@@ -154,13 +156,17 @@ down.
 
 ## 5.9 Many questions in one request
 
-Questions are independent. A question's answer is the same whether it is asked alone or with fifty others, so you can
-group questions freely:
+Questions are independent. In exact arithmetic a question's answer is the same whether it is asked alone or with
+fifty others, so you can group questions freely:
 
 - **Ask everything about a state in one request.** The state is processed once and shared by all questions, so each
   extra question costs only its own instructions and options.
-- **Adding a question never changes the others.** You can add a new question to a production request without
-  re-validating the existing ones.
+- **Adding a question cannot change the others.** No answer sees another question, so you can add a question to a
+  production request without re-validating the existing ones. In bf16 (16-bit floating point, in which E4B bundles
+  run by default), a different packing still moves probabilities through rounding. On E4B, adding a question moved
+  them by 0.003 on average and at most 0.07, and flipped none of 100 answers. On 26B A4B in bf16, 19–22% of answers
+  flipped when only the packing changed, so load that backbone in float32 where answers must not move (sections 6.9
+  and 11.7).
 - **One answer is never context for another.** If question B depends on the answer to question A, ask A first and put
   its answer in B's state or instructions in a second request.
 

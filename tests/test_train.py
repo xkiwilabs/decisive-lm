@@ -82,3 +82,15 @@ def test_val_metrics_and_selection_criteria():
     assert set(result["best"]) == {"loss", "cal_loss", "acc"}
     assert result["best_step"] == result["best"]["acc"]["step"]
     assert result["best_val"] == max(h["val_acc"] for h in result["history"]) or result["best_step"] == 0
+
+
+def test_training_skips_a_micro_batch_with_no_targets():
+    # A row whose questions all lack targets, alone in its micro-batch (here every row is: the budget fits one), must
+    # not stop training (General v5c_nts crashed on one at step ~3,700).
+    model = dlm()
+    empty = ROWS[0].model_copy(update={"id": "r_empty", "targets": {}})
+    items = make_items(model, ROWS + [empty])
+    budget = max(i.n_tokens for i in items)
+    result = train_adapter(model, items, items, epochs=2, rows_per_step=2, max_tokens=budget, lr_lora=5e-3,
+                           lr_head=5e-3, eval_every=2, patience=100, seed=0, checkpointing=False)
+    assert len(result["history"]) > 1

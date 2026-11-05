@@ -25,7 +25,7 @@ These are easy to break silently, so the tests check them. Please don't weaken a
   other options, not other questions, and not its own index. Adding or removing a question, or reordering options,
   must not change any other answer. Question ids are never shown to the model.
 - **Hidden states, not logits.** The scorer reads the decoder's last hidden state at each query token. Don't compute
-  the language-model head, and don't resize the vocabulary: the query tokens reuse reserved token ids.
+  the language-model head, and don't resize the vocabulary, because the query tokens reuse reserved token ids.
 - **One preprocessing path.** `decisivelm/preprocess.py` is shared by the teacher labeller and the model. Any
   difference between what they see becomes label noise.
 - **Never hard-code a backbone.** Read sizes such as the sliding window and the hidden size from the model config or
@@ -34,16 +34,20 @@ These are easy to break silently, so the tests check them. Please don't weaken a
 
 ## Data and model rules for contributions
 
-- **Clean room.** The request format follows a published API specification. Never send requests to that service,
-  and never contribute data, labels, tests or comparisons that use its outputs, including old response logs
-  ([guide chapter 16](docs/guide/16-provenance-licences-and-responsible-use.md)).
+- **Clean room.** The request format follows the public documentation of TypeSafe's Jev System One API. Never send
+  requests to Jev or any TypeSafe service, and never contribute data, labels, tests or comparisons that use Jev's
+  outputs, including old response logs
+  ([guide chapter 16](docs/guide/16-provenance-licences-and-responsible-use.md#161-the-clean-room-rule)).
 - **Model origin.** Models developed by a Chinese organisation, or derived from one, are not used in any role:
   backbone, teacher, baseline, embeddings, speech or OCR. Record the developer and origin of any model you add.
-- **Licences.** Register every new dataset in `configs/datasets.yaml` with its licence, tier and pinned files. A
-  converter copies only the fields it needs. Only release-tier data goes into the published general head
-  ([guide chapter 14](docs/guide/14-datasets.md)).
-- **Held-out data stays held out.** Never train on public test splits, on anything in `configs/holdout.yaml`, or on
-  the frozen evaluation suite.
+- **Licences.** Register every new dataset in `configs/datasets.yaml` with its licence, tier and pinned files. The
+  tier follows from the licence: R (release) for permissive licences, S for share-alike licences and X for restricted
+  or unclear ones ([guide 14.1](docs/guide/14-datasets.md#141-licence-tiers)). A source may be put in a more
+  restrictive tier with a recorded reason, never a less restrictive one. A converter copies only the fields it needs.
+  Only R-tier data goes into the published general head.
+- **Held-out data stays held out.** Never train on public test splits or on anything in `configs/holdout.yaml`, which
+  includes the frozen evaluation suite (the four public datasets that release candidates are scored on, fixed before
+  any candidate was scored, [guide chapter 15](docs/guide/15-release-criteria.md)).
 - **No data in git.** Datasets, predictions and bundles stay under `data/` and `bundles/`, which are not tracked.
 
 ## Pull requests

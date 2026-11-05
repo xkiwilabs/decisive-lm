@@ -2,8 +2,8 @@
 
 Every public dataset the project uses is registered in `configs/datasets.yaml` with its source, licence, licence tier
 and the exact files to download. Each file is pinned to a commit, a Hugging Face revision or a SHA-256 checksum. This
-chapter lists the datasets by role and explains how to fetch and convert them. It also covers what each release
-publishes and the attribution the licences require.
+chapter lists the datasets by role, explains how to fetch and convert them, and covers what each release publishes and
+the attribution the licences require.
 
 ## 14.1 Licence tiers
 
@@ -11,7 +11,7 @@ Every row carries a licence and a **tier**, derived from the licence (`decisivel
 
 | Tier | Meaning | Allowed in |
 |---|---|---|
-| **R** (release) | Permissive, commercial use allowed, no share-alike terms (CC0, CC BY, MIT, Apache-2.0, the OANC's terms) | The published general head, user adapters, evaluation |
+| **R** (release) | Permissive, commercial use allowed, no share-alike terms (CC0, CC BY, MIT, Apache-2.0, the Open American National Corpus (OANC) terms) | The published general head, user adapters, evaluation |
 | **S** (share-alike) | CC BY-SA, ODbL, GPL | User and private adapters, evaluation |
 | **X** (restricted) | Non-commercial, research-only, third-party media, or containing proprietary-model outputs | Private experiments and evaluation only; never in released weights |
 
@@ -20,14 +20,17 @@ but never a less restrictive one. Rows derived from other rows inherit the most 
 general head trains on R-tier rows only.
 
 A dataset whose authors state no licence and no terms restricting its use is tier R, with licence `NOASSERTION`; the
-model card lists it as "no licence available". Only data whose licence or terms clearly forbid the use is excluded.
+model card lists it as "no licence available". Only data whose licence or terms clearly forbid the use is excluded. Two
+development benchmarks with no stated licence, AG News and SST-2, are nonetheless placed in tier X by an `override`
+(14.3).
 
 Some data is never used, whatever its licence:
 
 - **Labels from proprietary models** are kept out of the release tier: for example UltraFeedback (GPT-4 ratings), the
   Arena preference sets, WildGuardMix (GPT-4 labels) and xLAM-60k (a research-use gate).
-- **The Stack Exchange data dump** is excluded entirely: its download terms forbid training language models on it.
-- **Public test splits** are never trained on; they are evaluation data only.
+- **The Stack Exchange data dump** is excluded entirely, because its download terms forbid training language models
+  on it.
+- **Public test splits** are used for evaluation only.
 - **People-affecting outcomes**: nothing trains on historical credit, hiring or insurance decisions, and no question
   infers a protected attribute such as age, gender, ethnicity or health from faces, voices or names (chapter 16).
 
@@ -38,24 +41,26 @@ Human-labelled datasets the general head trains on (their `train` splits only). 
 
 | Dataset | Source | Licence | Tier | Becomes |
 |---|---|---|---|---|
-| Banking77 (Casanueva et al. 2020) | [PolyAI-LDN/task-specific-datasets](https://github.com/PolyAI-LDN/task-specific-datasets) | CC BY 4.0 | R | 13,083 online-banking queries; one Choice over 77 intents, plus exploded variants |
+| Banking77 (Casanueva et al. 2020) | [PolyAI-LDN/task-specific-datasets](https://github.com/PolyAI-LDN/task-specific-datasets) | CC BY 4.0 | R | 13,083 online-banking queries; one Choice over 77 intents, plus exploded variants (schema explosion, section 13.3) |
 | CLINC150 (Larson et al. 2019) | [clinc/clinc_oos](https://huggingface.co/datasets/clinc/clinc_oos), "plus" | CC BY 3.0 | R | Virtual-assistant requests; one Choice over 150 intents plus a self-contained out-of-scope option, plus exploded variants |
 | HelpSteer2 (Wang et al. 2024) | [nvidia/HelpSteer2](https://huggingface.co/datasets/nvidia/HelpSteer2) | CC BY 4.0 | R | Prompt–response pairs; five Scores (0–4): helpfulness, correctness, coherence, complexity, verbosity |
 | Civil Comments (Borkan et al. 2019) | [google/civil_comments](https://huggingface.co/datasets/google/civil_comments) | CC0 1.0 | R | Public comments; seven Nouls whose targets are the share of raters marking each toxicity attribute |
 | GoEmotions (Demszky et al. 2020) | [google-research-datasets/go_emotions](https://huggingface.co/datasets/google-research-datasets/go_emotions) | Apache-2.0 | R | 58k Reddit comments rated by 3–5 raters; emotion Nouls (27 emotions plus neutral) and a four-way sentiment Choice (positive, negative, ambiguous, neutral) |
 | LEDGAR (Tuggener et al. 2020; LexGLUE, Chalkidis et al. 2022) | [coastalcph/lex_glue](https://huggingface.co/datasets/coastalcph/lex_glue), `ledgar` | CC BY 4.0 | R | 80k contract provisions from SEC filings; one Choice over 100 provision types |
+| HelpSteer2-Preference (Wang et al. 2025) | [nvidia/HelpSteer2](https://huggingface.co/datasets/nvidia/HelpSteer2), `preference` | CC BY 4.0 | R | Trained on from 0.2. The released head did not train on it. Two responses to one HelpSteer2 prompt; one Score over six levels, which response is better and by how much, with targets from the shares of all the pair's individual ratings. Each pair also appears with the responses swapped. Splits follow HelpSteer2's, by prompt. It is the same task as the suite's HelpSteer3, so from 0.2 HelpSteer3 is reported as a seen task |
 
 LEDGAR's licence is as distributed in LexGLUE; the provisions themselves are public SEC EDGAR filings.
 
 **Generated rows.** Question sets and states written by Gemma 4 26B A4B (`scripts/synth_generate.py`, chapter 13) are
-registered as `synth_gemma4`. They are Apache-2.0 and R tier: Gemma 4 places no terms on its outputs. Fan-out rows,
-written about a real state from a seed, keep that seed's source, licence and tier.
+registered as `synth_gemma4`. They are Apache-2.0 and R tier, because Gemma 4 places no terms on its outputs. Fan-out
+rows, written about a real state from a seed, keep that seed's source, licence and tier.
 
 ## 14.3 Development benchmarks
 
-Public test sets used to compare models zero-shot during development. Each uses the published test (or validation)
-split, with the item sample and question wording of an independent, publicly available benchmark harness, so results
-can be set beside published figures. Data always comes from the original Hugging Face datasets.
+Public test sets used to compare models zero-shot (with no training or calibration rows from the task) during
+development. Each uses the published test (or validation) split, with the item sample and question wording of an
+independent, publicly available benchmark harness, so results can be set beside published figures. Data always comes
+from the original Hugging Face datasets.
 
 The item samples and question wording are credited to two public harnesses:
 [jevbench](https://github.com/dhruvmehra/jevbench) (MIT) for Banking77, AG News and SST-2, and
@@ -63,15 +68,17 @@ The item samples and question wording are credited to two public harnesses:
 Twitter financial news topics and DailyDialog. Only their sampling and wording are reused, never any model outputs
 they contain.
 
-Every row is `gold_test` with a one-hot human label, and every one of these sources is held out of the general head.
-Because they were used to choose between candidate heads, they are reported as development results, not as release
-gates.
+Every row is `gold_test` with a one-hot human label (all probability on the one published answer, with no rater
+shares), so these sets show accuracy and calibration but not whether confidence follows rater disagreement. Every one of
+these sources is held out of the general head (`configs/holdout.yaml`). For Banking77 that is the 500-item sample only,
+because the seed's own train split still trains the head (14.2). Because they were used to choose between candidate
+heads, they are reported as development results, not as release gates.
 
 | Dataset | Source | Licence | Tier | Becomes |
 |---|---|---|---|---|
 | Banking77 test sample | [legacy-datasets/banking77](https://huggingface.co/datasets/legacy-datasets/banking77) | CC BY 4.0 | R | 500 items; one Choice over 77 intents with the harness's intent descriptions |
-| AG News (Zhang et al. 2015) | [fancyzhx/ag_news](https://huggingface.co/datasets/fancyzhx/ag_news) | none stated | X | 500 items; one Choice over 4 topics |
-| SST-2 (Socher et al. 2013) | [stanfordnlp/sst2](https://huggingface.co/datasets/stanfordnlp/sst2) | none stated | X | 500 validation items; one Choice over 2 sentiments |
+| AG News (Zhang et al. 2015) | [fancyzhx/ag_news](https://huggingface.co/datasets/fancyzhx/ag_news) | none stated; X by `override`, because the original AG corpus is offered for non-commercial research | X | 500 items; one Choice over 4 topics |
+| SST-2 (Socher et al. 2013) | [stanfordnlp/sst2](https://huggingface.co/datasets/stanfordnlp/sst2) | none stated; X by `override`, kept for evaluation only | X | 500 validation items; one Choice over 2 sentiments |
 | emotion (Saravia et al. 2018) | [dair-ai/emotion](https://huggingface.co/datasets/dair-ai/emotion) | other (research and education) | X | 2,000 tweets; one Choice over 6 emotions |
 | TweetTopic (Antypas et al. 2022) | [cardiffnlp/tweet_topic_single](https://huggingface.co/datasets/cardiffnlp/tweet_topic_single) | other | X | 1,693 tweets; one Choice over 6 topics |
 | Twitter financial news topics | [zeroshot/twitter-financial-news-topic](https://huggingface.co/datasets/zeroshot/twitter-financial-news-topic) | MIT (tweet text under X's terms) | X | 4,117 tweets; one Choice over 20 topics |
@@ -90,6 +97,42 @@ the media stay under `data/raw/` and are never redistributed.
 | KonIQ-10k (Hosu et al. 2020) | [OSF mirror](https://osf.io/hcsdy/); rating counts from [subpic/koniq](https://github.com/subpic/koniq) | database: no licence stated ("freely available to the research community"); the photos are Flickr images under their own licences; rating file MIT | X | 10,073 photos at 1024×768; one Score on technical quality over 5 levels; targets from about 107 raters per photo; the authors' split |
 | CREMA-D (Cao et al. 2014) | [CheyneyComputerScience/CREMA-D](https://github.com/CheyneyComputerScience/CREMA-D) | ODbL 1.0 (contents under the Database Contents License) | S | 7,442 clips; one Choice over 6 emotions; targets from about 10 listeners per clip who heard it without the video; splits by actor. The actors' demographics file is never read |
 | THINGSplus (Hebart et al. 2019; Stoinski, Perkuhn & Hebart 2024) | [OSF project jum2f](https://osf.io/jum2f/) | ratings CC BY 4.0; photos CC0 | R | 1,845 objects, each with one public-domain photo; one Score on agreement that it is "something that lives", 7 levels; targets from about 37 raters per object; splits by object. Only the CC0 photos are used, never the password-protected THINGS image set; the raters' age and gender are never read |
+
+### Zero-shot image check
+
+One more multi-rater image set is held out from every mix and from every fine-tune example. It checks whether the
+general head's confidence follows human disagreement on a kind of image it was not trained on. Both released heads were
+trained only on VizWiz-VQA's photo questions. The E4B head was checked on this set
+(`results/cifar10h_v5c_zero_shot.md`) and the 26B A4B head has not been; an earlier head, trained on text only, was
+checked the same way (`results/cifar10h_v3d_zero_shot.md`).
+
+| Dataset | Source | Licence | Tier | Becomes |
+|---|---|---|---|---|
+| CIFAR-10H (Peterson et al. 2019) | label counts from [jcpeterson/cifar-10h](https://github.com/jcpeterson/cifar-10h); images: the CIFAR-10 test set (Krizhevsky 2009) from [uoft-cs/cifar10](https://huggingface.co/datasets/uoft-cs/cifar10) | labels CC BY-NC-SA 4.0; the images state no licence | X | 10,000 photos at 32 × 32; one Choice over the 10 classes; targets from about 50 people per photo; split 40% `gold_calib` and 60% `gold_test`. The counts are read without pickle, and the images are checked to be in the counts' order |
+
+### Image and audio for version 1.0
+
+Version 1.0 adds more images and audio to the general head. Three multi-rater sets are its training data, and two more
+are frozen as its image and audio suites, held out of every mix and every user adapter (`configs/holdout.yaml`) before
+any image or audio training. The first release already trains on 10,000 of VizWiz-VQA's training photos (General v5c,
+[chapter 13](13-how-the-general-head-was-trained.md)), and on none of the audio. As with every source, the media stay
+under `data/raw/` and are never redistributed.
+
+| Dataset | Source | Licence | Tier | Becomes |
+|---|---|---|---|---|
+| VizWiz-VQA (Gurari et al. 2018) | [vizwiz.org](https://vizwiz.org/tasks-and-datasets/vqa/) | CC BY 4.0 | R | 24,842 photos taken by blind people, each with the question they asked; a Noul, whether the photo shows enough to answer, from the share of ten answerers who gave an answer; and, for 20,818 of them, the answer as a Choice. The train annotations become `train` and `val`, the validation annotations `gold_calib` and `gold_test`; the test split has no public answers and is not used |
+| SONYC-UST v2 (Cartwright et al. 2020) | [Zenodo 3966543](https://zenodo.org/records/3966543) | CC BY 4.0 | R | 18,510 ten-second recordings from New York City street sensors; eight Nouls, one per kind of sound (engine, impact machinery, other impacts, powered saw, alert signal, music, human voice, dog), from three volunteers per clip. The SONYC team's own labels and the sensor's location and recording time are never used. SONYC's own splits, with its 2019 test recordings split by sensor into `gold_calib` and `gold_test` |
+| Emozionalmente (Catania et al.) | [Zenodo 6569824](https://zenodo.org/records/6569824) | CC BY 4.0 | R | 6,902 clips of Italian actors; one Choice over seven emotions, from the listeners (about five per clip) who said which emotion they heard. Splits by actor. The listeners' demographics file is never read |
+| TextVQA (Singh et al. 2019), frozen suite | [textvqa.org](https://textvqa.org) | annotations CC BY 4.0; the photos are Open Images, listed as CC BY 2.0 but not warranted per photo | X | The validation questions only: 4,985 questions on 3,161 photos that need reading the text in the photo; the answer as a Choice from ten answerers; split by photo into `gold_calib` (40%) and `gold_test` (60%) |
+| ODAQ (Torcoli et al. 2024), frozen suite | [Zenodo 10405774](https://zenodo.org/records/10405774) | the scores CC BY 4.0; each recording under its own licence | X | 136 conditions of 17 excerpts: an original and a processed version (a codec, a band limit or source separation, or the original again, hidden), with one Score on how good the processed version sounds, over MUSHRA's five bands, from 26 expert listeners. Only excerpts whose audio is CC BY or CC0 are used; the 13 CC BY-NC excerpts are left out. Split by excerpt |
+
+The photo question-answering sets have free-text answers. Each question becomes a Choice with a fixed number of
+options: the four answers given most often (two, yes and no, for a yes/no question), filled up when fewer with answers
+to other questions that no answerer gave here. A fixed count keeps the number of options from telling the head how
+much the answerers disagreed. Answers are compared after light normalisation, so "Dakota." and "dakota" are one
+answer, but "dakota" and "dakota digital" stay two, and the head learns to split its confidence between them as the
+answerers did. A question is left out when its four options cover fewer than half of the answerers who gave an answer
+(`decisivelm/data/converters/vqa.py`).
 
 ## 14.4 The frozen held-out suite
 
@@ -119,15 +162,19 @@ Notes on how they are converted:
   commit, so it is pinned by its SHA-256.
 
 **No overlap with trainable data.** `scripts/overlap_audit.py` compares the suite's text with every trainable source in
-both directions, using word 8-grams (exact match for texts under 8 words). Suite rows found in training data are
-listed in `configs/suite_exclusions.txt` and left out by the converters. Most of them are CUAD sections that share
-text with LEDGAR provisions.
+both directions, using word 8-grams (runs of eight consecutive words; exact match for texts under 8 words). A suite row
+overlaps when at least half of its 8-grams occur in a training file. A training row overlaps when at least half of its
+8-grams occur in a suite set, which catches a short training text copied into a long suite state (a LEDGAR provision
+inside a CUAD section, for example). Suite rows found in either direction are listed in `configs/suite_exclusions.txt`
+and left out by the converters. Of the 641 rows left out, 582 are CUAD sections, most of them sharing text with LEDGAR
+provisions (`results/suite_overlap.md`). The audit was run again before the released head was scored, with three more
+trainable sources (`synth_v4`, VizWiz-VQA and HelpSteer2-Preference), and found no overlap with anything the released
+head trains on (`results/suite_overlap_v5c.md`).
 
-**The new-task development set.** One more human-labelled dataset is held out of the general head, for a different
-purpose: it shows how the head behaves on a task it has not seen, asked three ways. It was also where an earlier
-candidate's new-task calibration scales were fitted, a correction the released head no longer uses (section 10.6).
-It is not part of the suite and is not a release gate, but it is never trained on by the general head
-(`configs/holdout.yaml`).
+**The new-task development set.** MultiNLI is also held out of the general head, for a different purpose: it shows how
+the head behaves on a task it has not seen, asked three ways. It was also where an earlier candidate's new-task
+calibration scales were fitted, a correction the released head no longer uses (section 10.6). It is not part of the
+suite and is not a release gate, but it is never trained on by the general head (`configs/holdout.yaml`).
 
 | Dataset | Source | Licence | Tier | Becomes |
 |---|---|---|---|---|
@@ -140,6 +187,30 @@ It is not part of the suite and is not a release gate, but it is never trained o
 - The archive is served from a university page rather than a commit, so it is pinned by its SHA-256.
 - A user adapter may train on MultiNLI's `train` rows; only the general head holds it out.
 
+### Development sets for rating scales and other languages
+
+Five more human-labelled sets check candidates during development. None is part of the suite or a release gate, and
+the released head (General v5c) trained on none of them.
+
+- **Wikipedia Talk toxicity** checks review readiness on a two-sided social scale rated by many people. It was added
+  after General v3d failed criterion 1 on Measuring Hate Speech's Scores (chapter 15), and it is held out of the
+  general head (`configs/holdout.yaml`), so every row is gold.
+- **Stanford Politeness**, **Humicroedit** and the **Conversational Sarcasm Corpus** are human ratings with several
+  raters per item. Two later candidates trained on them (one on politeness, one on humour and sarcasm) and were not
+  released (docs/RELEASE.md, change log 2026-10-26 and 2026-10-27). Politeness is now tier S, so the general head
+  cannot train on it. From 0.2, Wikipedia toxicity, Humicroedit and the sarcasm corpus are the development checks of
+  transfer to two-sided scales the head has not seen (docs/RELEASE.md, change log 2026-10-27).
+- **SIB-200** checks calibration on text that is not English. It is tier S and held out of the general head, so every
+  row is gold.
+
+| Dataset | Source | Licence | Tier | Becomes |
+|---|---|---|---|---|
+| Wikipedia Talk Labels, Toxicity (Wulczyn et al. 2017) | [figshare 4563973](https://figshare.com/articles/Wikipedia_Talk_Labels_Toxicity/4563973) | CC0 1.0 | R | Comments from the release's own test split with at least 3 raters (about 10 each); one Score over 5 levels from very toxic to very healthy; 2,040 `gold_calib` and 3,060 `gold_test` rows |
+| Stanford Politeness Corpus, Stack Exchange part (Danescu-Niculescu-Mizil et al. 2013) | [ConvoKit](https://convokit.cornell.edu/documentation/stack_politeness.html) | CC BY-SA 3.0 (the Stack Exchange posts) | S | 6,603 requests, 5 raters each; one Score over 5 levels from very impolite to very polite, binned from a 1–25 slider; splits by text: 15% `gold_test`, 10% `gold_calib`, 5% `val`, the rest `train` |
+| Humicroedit (Hossain et al. 2020; SemEval-2020 Task 7) | [Zenodo 3969509](https://zenodo.org/records/3969509) | CC BY 4.0 | R | About 15,000 news headlines with one word edited to be funny, plus FunLines' 8,000, about 5 graders each; one Score over 4 grades from not funny to funny; the task's own splits, its test split becoming `gold_calib` (40%) and `gold_test` (60%) |
+| Conversational Sarcasm Corpus (Jang & Frassinelli 2024) | [hyewon-jang-kn/conversational-sarcasm-corpus](https://github.com/hyewon-jang-kn/conversational-sarcasm-corpus) | MIT | R | 7,036 replies to everyday scenarios, each rated by 4 or 6 other people; one Score over 6 levels of sarcasm; splits by scenario: 15% `gold_test`, 10% `gold_calib`, 5% `val`, the rest `train` |
+| SIB-200 (Adelani et al. 2024) | [Davlan/sib200](https://huggingface.co/datasets/Davlan/sib200) | CC BY-SA 4.0 | S | 1,004 news sentences, one published topic each, in the 195 languages outside the suite's ten; one Choice over 7 topics; split by sentence into `gold_calib` (40%) and `gold_test` (60%) |
+
 ## 14.5 Fetching and converting
 
 Download a dataset's pinned files:
@@ -151,7 +222,8 @@ uv run python scripts/fetch_dataset.py banking77 clinc150
 Each `fetch` entry in `configs/datasets.yaml` is either a URL pinned to a commit (`url`, `file`) or a Hugging Face
 dataset file at a fixed revision (`hf`, `revision`, `path`, `file`). An optional `sha256` pins the content too. A file
 that does not match is removed and the fetch stops. Files go to `data/raw/<name>/`, with a `MANIFEST.json` recording
-each file's source and SHA-256.
+each file's source and SHA-256. `--jobs N` downloads N of a dataset's files at once, which helps with a slow host such
+as Zenodo.
 
 Convert them into canonical rows (chapter 8):
 
@@ -165,9 +237,16 @@ tokenizer (`--backbone`), exactly as the model will see them. Splits are assigne
 is derived, and the split assignment's hashes are printed so that a rebuild can be checked. Suite rows listed in
 `configs/suite_exclusions.txt` are left out.
 
-The converter names are the registry names: `banking77`, `clinc150`, `helpsteer2`, `civil_comments`, `goemotions`,
-`ledgar`, `multinli`, `helpsteer3`, `measuring_hate_speech`, `cuad`, `massive`, and the benchmark sets (`bench_banking77`,
-`bench_agnews`, `bench_sst2`, `bench_emotion`, `bench_tweet_topic`, `bench_fin_topic`, `bench_daily_dialog`).
+The converter names are the registry names:
+
+- training seeds: `banking77`, `clinc150`, `helpsteer2`, `helpsteer2_preference`, `civil_comments`, `goemotions`,
+  `ledgar`;
+- held-out and development sets: `helpsteer3`, `measuring_hate_speech`, `cuad`, `massive`, `multinli`, `sib200`,
+  `wiki_toxicity`, `politeness`, `humicroedit`, `csc_sarcasm`;
+- image and audio examples: `koniq10k`, `crema_d`, `things_living`; the zero-shot image check: `cifar10h`;
+- image and audio for version 1.0: `vizwiz_vqa`, `sonyc_ust`, `emozionalmente`, and the suites `textvqa`, `odaq`;
+- the benchmark sets: `bench_banking77`, `bench_agnews`, `bench_sst2`, `bench_emotion`, `bench_tweet_topic`,
+  `bench_fin_topic`, `bench_daily_dialog`.
 
 Summarise any converted file:
 
@@ -180,8 +259,10 @@ rates.
 
 ## 14.6 Your own data
 
-Your own datasets follow the same path. Register the source in `configs/datasets.yaml` with its licence and tier,
-write a converter that maps your raw files to canonical rows (chapter 8), and keep your raw data under `data/raw/`.
+Your own datasets follow the same path. Register the source in `configs/datasets.local.yaml` with its licence and
+tier (section 8.8 has an example), write a converter that maps your raw files to canonical rows (chapter 8), and keep
+your raw data under `data/raw/`. `configs/datasets.local.yaml` is not tracked by git, so a private source never
+reaches the public registry.
 The whole `data/` directory is excluded from version control. Data you cannot publish belongs in tier X, which keeps
 it out of any released weights.
 
@@ -205,7 +286,8 @@ Before publishing, each release checks and records on the dataset card that:
 
 - every published row is R tier;
 - the teacher's licence allows its outputs to be published;
-- no restricted-tier or private data, holdout row, or output of a third-party commercial decision service is included.
+- no restricted-tier or private data, holdout row, or output of a third-party commercial decision service (the
+  clean-room rule, section 16.1) is included.
 
 ## 14.8 Attribution
 
@@ -218,7 +300,13 @@ use; cite Williams, Nangia and Bowman (2018) and link the corpus page.
 
 THINGSplus ratings are CC BY 4.0: cite Hebart et al. (2019, PLoS ONE) and Stoinski, Perkuhn and Hebart (2024,
 Behavior Research Methods). CREMA-D is under the ODbL: cite Cao et al. (2014, IEEE Transactions on Affective
-Computing), and anything built from it as a database must be shared alike.
+Computing), and anything built from it as a database must be shared alike. CIFAR-10H is CC BY-NC-SA 4.0: cite
+Peterson, Battleday, Griffiths and Russakovsky (2019, ICCV) and, for the images, Krizhevsky (2009).
+
+The parts of the version 1.0 sets that are used are CC BY 4.0. Cite Gurari et al. (2018, CVPR) for VizWiz-VQA,
+Cartwright et al. (2020, DCASE) for SONYC-UST, Catania et al. (the Zenodo record) for Emozionalmente, Singh et al.
+(2019, CVPR) for TextVQA and Torcoli et al. (2024, ICASSP) for ODAQ. ODAQ's recordings carry their own credits, listed
+per file in the dataset's `_detailed_license.csv`.
 
 The development benchmarks reuse item samples and question wording from the jevbench harness, which is MIT-licensed;
 its copyright and permission notice is reproduced in the repository's `NOTICE` file.

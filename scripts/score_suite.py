@@ -7,7 +7,9 @@
 Methods:
 - the candidate: its bundle's predictions, data/predictions/<bundle>__<set>.jsonl (scripts/predict_bundle.py), else
   <bundle>.jsonl; "before calibration" is the same answers read out at temperature 1 (decisivelm.calibrate.invert);
-- P0 (the frozen E4B prompted) and the 26B teacher, from data/teacher/<set>__<teacher>.jsonl (label_teacher.py).
+- P0 (the candidate's own backbone prompted: the teacher in configs/teachers.yaml whose tokenizer_backbone is the
+  bundle's backbone, so the 26B teacher for a 26B A4B head) and the 26B teacher, from
+  data/teacher/<set>__<teacher>.jsonl (label_teacher.py).
   They are calibrated the way the candidate is (decisivelm.calibrate.fit_calibration) on the same human-labelled rows:
   the gold_calib rows of --calib-data (the candidate's mix), as each labelled them in
   data/teacher/<calib stem>__<teacher>.jsonl. When the candidate's bundle carries a new-task scale
@@ -16,7 +18,10 @@ Methods:
 - the per-task step (criterion 2): on each set, 100 of its rows (chosen by a hash of their ids, never scored) give each
   method one Choice and one Score scale on its own answers, as `scripts/recalibrate.py --new-task` would on a user's
   100 labelled items; every criterion is scored on the remaining rows, calibration after that step and everything
-  else before it. Nothing else is fitted on the suite.
+  else before it. Nothing else is fitted on the suite. With --task-guard (tested and not adopted:
+  results/task_guard_dev.md), each method keeps, per type, whichever of its raw, calibrated, or calibrated and scaled
+  answers has the lowest Brier on those 100 rows (the scaled form cross-validated), so the step cannot make a method
+  worse where its own 100 rows already show it would.
 
 A task is one set's questions of one type (Measuring Hate Speech has two: its nine Scores and its Noul). Per task,
 candidate minus P0 with paired 95% CIs from item-level bootstrap resamples over rows:
@@ -44,6 +49,7 @@ import numpy as np
 import torch
 import yaml
 
+from decisivelm.bundle import bundle_backbone
 from decisivelm.calibrate import (QuestionLogits, calibration_json, fit_calibration, fit_new_task_scale, invert,
                                   new_task_scales, question_names, scaled)
 from decisivelm.data.dataset import load_records
@@ -54,13 +60,14 @@ from decisivelm.train import _target
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 SUITE = ["helpsteer3", "measuring_hate_speech", "cuad", "massive"]
-BASELINES = {"P0": "gemma4_e4b", "teacher": "gemma4_26b_a4b"}
+TEACHER = "gemma4_26b_a4b"
 PRIMARY = {"choice": "accuracy", "score": "MAE", "noul": "AUROC"}
 REVIEW = 0.2
 MIN_N = 25
 ECE_0X, ECE_10 = 0.10, 0.07
 DYNAMIC_RANGE = 0.2
 TASK_CALIB_ROWS = 100   # the per-task step's labelled rows per set (docs/RELEASE.md criterion 2)
+GUARD_FOLDS = 5         # cross-validation folds of the per-task step's rows for --task-guard
 MAX_SIBLINGS = 50       # a family this small is one source item in several forms (a MASSIVE utterance in 10 languages)
 
 
@@ -104,6 +111,17 @@ def teacher_calib_questions(teacher: str, path: pathlib.Path) -> list[QuestionLo
                            _target(q, r.targets.get(qid)))
             for r in load_records(path) if r.split == "gold_calib" and r.id in raw
             for qid, q in r.questions.items() if (ans := raw[r.id]["answers"].get(qid)) is not None]
+
+
+def baselines(bundle: str) -> dict[str, str]:
+    """P0, the base model the candidate is built on prompted (docs/RELEASE.md: "better off than if they had prompted the
+    base model it is built on"), and the 26B teacher. For a 26B A4B candidate the two are the same model."""
+    backbone = bundle_backbone(REPO / "bundles" / bundle)
+    teachers = yaml.safe_load((REPO / "configs" / "teachers.yaml").read_text())["teachers"]
+    p0 = [t for t, c in teachers.items() if c.get("tokenizer_backbone") == backbone]
+    if len(p0) != 1:
+        raise SystemExit(f"{bundle}: expected one teacher in configs/teachers.yaml on backbone {backbone}, found {p0}")
+    return {"P0": p0[0], "teacher": TEACHER}
 
 
 def new_task_of(bundle: str) -> pathlib.Path | None:
@@ -151,16 +169,19 @@ def task_calib_split(rows) -> tuple[list, list]:
     return calib, [r for r in rows if r.id not in ids and r.lineage.family_id not in families]
 
 
-def per_task(answers: dict, rows, calib_rows) -> tuple[dict, dict[str, float]]:
-    """`answers` after the per-task step, and its scales: one factor per type on the method's calibrated answers to
-    `calib_rows`, fitted like a new-task scale (decisivelm.calibrate.fit_new_task_scale), and applied to every row as
-    p ∝ p^(1/s), which is that factor on the temperature. Noul answers are left as they are, as the new-task scale
-    leaves them; before-calibration answers too."""
+def fit_task_scales(answers: dict, calib_rows) -> dict[str, float]:
+    """One factor per type on the method's calibrated answers to `calib_rows`, fitted like a new-task scale
+    (decisivelm.calibrate.fit_new_task_scale). Noul answers get none, as the new-task scale gives them none."""
     qs = [QuestionLogits(r.id, r.split, qid, q.type, question_names(q),
                          torch.log(torch.tensor([answers[r.id][qid][0][k] for k in question_names(q)]).clamp_min(1e-30)),
                          _target(q, r.targets.get(qid)))
           for r in calib_rows for qid, q in r.questions.items() if q.type != "noul"]
-    scales = {t: fit_new_task_scale(qs, Calibration(), t) for t in ("choice", "score") if any(q.qtype == t for q in qs)}
+    return {t: fit_new_task_scale(qs, Calibration(), t) for t in ("choice", "score") if any(q.qtype == t for q in qs)}
+
+
+def apply_task_scales(answers: dict, rows, scales: dict[str, float]) -> dict:
+    """`answers` with each type's calibrated answers scaled as p ∝ p^(1/s), which is that factor on the temperature;
+    before-calibration answers are left as they are."""
     out = {}
     for r in rows:
         out[r.id] = {}
@@ -171,7 +192,57 @@ def per_task(answers: dict, rows, calib_rows) -> tuple[dict, dict[str, float]]:
                 p = torch.softmax(torch.log(torch.tensor([cal[k] for k in names]).clamp_min(1e-30)) / s, -1)
                 cal = dict(zip(names, p.tolist()))
             out[r.id][qid] = (cal, raw)
-    return out, scales
+    return out
+
+
+def brier(answers: dict, rows, qtype: str) -> float:
+    """Brier of the (calibrated) answers to `rows`' `qtype` questions, against hard labels as the criteria score it."""
+    return Task("guard", qtype, rows, {"m": answers}).metrics("m", np.arange(sum(
+        q.type == qtype for r in rows for q in r.questions.values())))["Brier"]
+
+
+def per_task(answers: dict, rows, calib_rows, guard: bool = False) -> tuple[dict, dict[str, float], dict[str, str]]:
+    """`answers` after the per-task step, its scales, and (with `guard`) the form kept for each type.
+
+    The step fits one factor per type on the method's calibrated answers to `calib_rows` (fit_task_scales) and applies
+    it to every row. Noul answers are left as they are, as the new-task scale leaves them; before-calibration answers
+    too. With `guard` (docs/RELEASE.md change log, 2026-11-05), each type keeps whichever of three forms has the lowest
+    Brier on `calib_rows`: the answers before any calibration, the calibrated answers, or the calibrated answers with
+    the factor, whose Brier is cross-validated over GUARD_FOLDS folds of `calib_rows` because it is fitted on them. The
+    step's own form (the factor; for Noul, the calibrated answers) is kept unless another is strictly lower. Every
+    method gets the same guard, on its own answers. A user with 100 labelled items can make the same check."""
+    scales = fit_task_scales(answers, calib_rows)
+    out = apply_task_scales(answers, rows, scales)
+    if not guard:
+        return out, scales, {}
+    folds = [calib_rows[k::GUARD_FOLDS] for k in range(GUARD_FOLDS)]
+    held_out = {}
+    for k, fold in enumerate(folds):
+        rest = [r for j, f in enumerate(folds) if j != k for r in f]
+        try:
+            fold_scales = fit_task_scales(answers, rest)
+        except ValueError:   # no untied question of a type in these folds: that fold is scored unscaled
+            fold_scales = {}
+        held_out |= apply_task_scales(answers, fold, fold_scales)
+    raw = {r.id: {qid: (b, b) for qid, (_, b) in answers[r.id].items()} for r in calib_rows}
+    forms = {}
+    for qtype in ("choice", "score", "noul"):
+        if not any(q.type == qtype for r in calib_rows for q in r.questions.values()):
+            continue
+        own = "scaled" if qtype in scales else "calibrated"
+        b = {"raw": brier(raw, calib_rows, qtype), "calibrated": brier(answers, calib_rows, qtype)}
+        if qtype in scales:
+            b["scaled"] = brier(held_out, calib_rows, qtype)
+        best = min(b, key=b.get)
+        forms[qtype] = best if b[best] < b[own] else own
+    for r in rows:
+        for qid, (cal, before) in out[r.id].items():
+            form = forms.get(r.questions[qid].type)
+            if form == "raw":
+                out[r.id][qid] = (before, before)
+            elif form == "calibrated":
+                out[r.id][qid] = answers[r.id][qid]
+    return out, {t: s for t, s in scales.items() if forms.get(t, "scaled") == "scaled"}, forms
 
 
 def unique_argmax(t: np.ndarray) -> int:
@@ -401,6 +472,10 @@ def main():
     ap.add_argument("--n-boot", type=int, default=1000)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", type=pathlib.Path)
+    ap.add_argument("--task-guard", action="store_true",
+                    help="the per-task step keeps, per type, the form with the lowest Brier on its 100 rows (raw, "
+                         "calibrated, or calibrated and scaled). Tested on the development sets and not adopted "
+                         "(results/task_guard_dev.md); kept so that check can be rerun")
     ap.add_argument("--seeds-only", action="store_true",
                     help="criterion 4 alone, printed (and written to --out if given); a development check")
     a = ap.parse_args()
@@ -417,24 +492,25 @@ def main():
         raise SystemExit(f"{out} exists: a candidate is scored on the suite once (docs/RELEASE.md)")
 
     new_task = new_task_of(a.candidate)
-    calibs = {m: baseline_calibration(t, a.calib_data, new_task) for m, t in BASELINES.items()}
+    base = baselines(a.candidate)
+    calibs = {m: baseline_calibration(t, a.calib_data, new_task) for m, t in base.items()}
     scale = f", Choice and Score temperatures scaled on {new_task.stem} gold_calib (new-task scale)" if new_task else ""
     lines = [f"# {a.candidate} against the release criteria", "",
              f"Sets: {', '.join(a.sets)}. Candidate minus P0, paired 95% CIs from {a.n_boot:,} item-level bootstrap "
-             f"resamples (rows). Baselines calibrated on the gold_calib rows of {', '.join(p.name for p in a.calib_data)}"
+             f"resamples (rows).{' Per-task step with the guard (--task-guard).' if a.task_guard else ''} Baselines calibrated on the gold_calib rows of {', '.join(p.name for p in a.calib_data)}"
              f"{scale}:"]
-    lines += [f"- {m} ({BASELINES[m]}), {n:,} questions: `{json.dumps(calibration_json(c))}`" for m, (c, n) in calibs.items()]
+    lines += [f"- {m} ({base[m]}), {n:,} questions: `{json.dumps(calibration_json(c))}`" for m, (c, n) in calibs.items()]
     lines.append("")
     verdicts, tables, primary_better = [], [], []
     for stem in a.sets:
         rows = [r for r in load_records(REPO / "data" / "processed" / f"{stem}.jsonl") if r.split == "gold_test"]
         answers = {"candidate": candidate_answers(a.candidate, stem, rows)}
-        answers |= {m: baseline_answers(BASELINES[m], c, stem, rows) for m, (c, _) in calibs.items()}
+        answers |= {m: baseline_answers(base[m], c, stem, rows) for m, (c, _) in calibs.items()}
         n_all, rows = len(rows), common_rows(rows, answers)
         calib_rows, rows = task_calib_split(rows)
-        task_answers, scales = {}, {}
+        task_answers, scales, forms = {}, {}, {}
         for m, ans in answers.items():
-            task_answers[m], scales[m] = per_task(ans, rows, calib_rows)
+            task_answers[m], scales[m], forms[m] = per_task(ans, rows, calib_rows, a.task_guard)
         for qtype in ("choice", "score", "noul"):
             if not any(q.type == qtype for r in rows for q in r.questions.values()):
                 continue
@@ -451,7 +527,9 @@ def main():
                        f"{len(calib_rows)} and their siblings), {len(task.row):,} questions"
                        f"{'; review readiness on items with ≥ 3 raters' if task.review else ''}. Per-task scales: "
                        + "; ".join(f"{m} " + (", ".join(f"{t} {v:.3f}" for t, v in scales[m].items()) or "none")
-                                   for m in scales) + ".", "",
+                                   for m in scales) + "."
+                       + (" Kept by the guard: " + "; ".join(f"{m} " + ", ".join(f"{t} {f}" for t, f in forms[m].items())
+                                                             for m in forms) + "." if a.task_guard else ""), "",
                        "| Metric | Candidate | P0 | Teacher | Δ candidate − P0 [95% CI] |", "|---|---|---|---|---|"]
             for key in keys:
                 d = s["diff"].get(key)

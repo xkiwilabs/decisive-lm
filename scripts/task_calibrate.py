@@ -8,13 +8,17 @@ For each prediction file, the probabilities are read back as logits (log p, so t
 a scale and offsets are fitted per question on the dataset's gold_calib rows, and every row is rewritten through them
 as <file>_task.jsonl, ready for scripts/eval_dataset.py. Give every method compared the same step, P0 included.
 The fitted calibration is printed and saved next to it as <file>_task.calibration.json.
+
+--calib-rows N fits on a random N of the gold_calib rows instead (seeded by --seed), the step a user takes with a
+few hundred ratings; the outputs are then <file>_task_n<N>_s<seed>.jsonl and .calibration.json.
 """
 import argparse
 import json
 import pathlib
+import random
 
-from decisivelm.calibrate import (QuestionLogits, calibration_json, fit_task_calibration, invert, predictions,
-                                  write_predictions)
+from decisivelm.calibrate import (MIN_TASK, QuestionLogits, calibration_json, fit_task_calibration, invert,
+                                  predictions, write_predictions)
 from decisivelm.data.dataset import load_records
 from decisivelm.head import Calibration, task_key
 from decisivelm.train import _target
@@ -42,15 +46,23 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", type=pathlib.Path, required=True)
     ap.add_argument("--predictions", type=pathlib.Path, nargs="+", required=True)
+    ap.add_argument("--calib-rows", type=int, help="fit on a random sample of this many gold_calib rows")
+    ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
     records = {r.id: r for r in load_records(a.data)}
     for path in a.predictions:
         qs = question_logits(path, records)
-        calib = Calibration(tasks=fit_task_calibration([q for q in qs if q.split == "gold_calib"], Calibration()))
+        fit = [q for q in qs if q.split == "gold_calib"]
+        if a.calib_rows:
+            ids = sorted({q.id for q in fit})
+            keep = set(random.Random(a.seed).sample(ids, min(a.calib_rows, len(ids))))
+            fit = [q for q in fit if q.id in keep]
+        calib = Calibration(tasks=fit_task_calibration(fit, Calibration(),
+                                                       min_questions=min(MIN_TASK, a.calib_rows or MIN_TASK)))
         if not calib.tasks:
             print(f"{path.name}: no question has enough gold_calib rows; nothing written", flush=True)
             continue
-        out = path.with_name(path.stem + "_task.jsonl")
+        out = path.with_name(path.stem + (f"_task_n{a.calib_rows}_s{a.seed}" if a.calib_rows else "_task") + ".jsonl")
         write_predictions(out, predictions(qs, calib))
         out.with_suffix(".calibration.json").write_text(json.dumps(calibration_json(calib), indent=1))
         print(f"{path.name}: {json.dumps(calib.tasks)}\n  wrote {out}", flush=True)

@@ -71,7 +71,7 @@ datasets:
       - {hf: nvidia/HelpSteer2, revision: 990b2711a36180dd19d9c94b8627844866f8982a, path: preference/preference.jsonl.gz, file: preference.jsonl.gz}
 
   koniq10k:
-    description: KonIQ-10k — 10,073 photos, each rated for technical quality on a 5-point scale (bad … excellent) by about 120 crowd workers
+    description: KonIQ-10k — 10,073 photos, each rated for technical quality on a 5-point scale (bad … excellent) by about 107 crowd workers
     source: https://database.mmsp-kn.de/koniq-10k-database.html (Hosu, Lin, Sziranyi & Saupe 2020)
     license: NOASSERTION
     tier: X
@@ -119,6 +119,104 @@ datasets:
       - {url: "https://osf.io/download/wb36u/", file: images_THINGSplus-CC0.zip, sha256: ed86912f6848ac5cf8b405a727f875295cc081cdd64271e80ae4d607b7d447e3}
       - {url: "https://osf.io/download/7y38s/", file: object-properties_trial-wise_thingsplus.tsv, sha256: a5172712c564ef060c20d18eace69e99d7aa3d798e81b7b628f63e1da7a4f05f}
       - {url: "https://osf.io/download/52wrx/", file: LICENSE, sha256: de570769b5545d7b9a7f9165b9da691370fa680330a8b2bf73cd9368ba1dbc97}
+
+  cifar10h:
+    description: CIFAR-10H — about 50 people's labels for each of the 10,000 CIFAR-10 test images (32 × 32 photos, ten classes)
+    source: https://github.com/jcpeterson/cifar-10h (Peterson, Battleday, Griffiths & Russakovsky 2019); images from CIFAR-10 (Krizhevsky 2009)
+    license: CC-BY-NC-SA-4.0
+    tier: X
+    note: >-
+      Held out from every mix (configs/holdout.yaml): a zero-shot check of confidence on images, never trained on. The
+      labels are CC BY-NC-SA 4.0; the CIFAR-10 images state no licence. The counts are read as a NumPy array without
+      pickle; the test images come from the uoft-cs/cifar10 parquet on Hugging Face, in the original test order
+      (the converter checks it against the counts), never from the pickled Python version.
+    fetch:
+      - {url: "https://raw.githubusercontent.com/jcpeterson/cifar-10h/389f22d9d300ec71a4c44735d46f550c94b957ab/data/cifar10h-counts.npy", file: cifar10h-counts.npy, sha256: 9b36b4550349af56c79083356312eb4af856cc5fd3caf1f669d40b9d0bbb69ff}
+      - {url: "https://raw.githubusercontent.com/jcpeterson/cifar-10h/389f22d9d300ec71a4c44735d46f550c94b957ab/LICENSE.txt", file: LICENSE.txt, sha256: 45844a64b97431323471d11fe43625dabc6ced0199308b9aa85327b4d09a3d5d}
+      - {hf: uoft-cs/cifar10, revision: 0b2714987fa478483af9968de7c934580d0bb9a2, path: plain_text/test-00000-of-00001.parquet, file: cifar10_test.parquet}
+
+  vizwiz_vqa:
+    description: VizWiz-VQA — photos taken by blind people with a spoken question each, and 10 crowd answers per question (with each answerer's confidence and whether it can be answered)
+    source: https://vizwiz.org/tasks-and-datasets/vqa/ (Gurari et al. 2018)
+    license: CC-BY-4.0
+    tier: R
+    note: >-
+      Licence read on vizwiz.org on 2026-10-29: "licensed under a Creative Commons Attribution 4.0 International
+      License". Train and validation only (the challenge barred training on test annotations; the test split is not
+      fetched). The photos come from blind users' phones: never viewed by us, never re-hosted. Free-text answers become
+      Choice options from the answer shares.
+    fetch:
+      - {url: "https://vizwiz.cs.colorado.edu/VizWiz_final/vqa_data/Annotations.zip", file: Annotations.zip}
+      - {url: "https://vizwiz.cs.colorado.edu/VizWiz_final/images/train.zip", file: train.zip}
+      - {url: "https://vizwiz.cs.colorado.edu/VizWiz_final/images/val.zip", file: val.zip}
+
+  textvqa:
+    description: TextVQA — questions that need reading the text in a photo (signs, labels), 10 crowd answers per question
+    source: https://textvqa.org (Singh et al. 2019); annotations from dl.fbaipublicfiles.com
+    license: CC-BY-4.0
+    tier: X
+    override: >-
+      The annotations are CC BY 4.0 (Hugging Face card facebook/textvqa, read 2026-10-29); the photos are Open Images
+      URLs listed as CC BY 2.0, which Google does not warrant per image. Held out as a frozen image suite, so used for
+      evaluation only.
+    fetch:
+      - {url: "https://dl.fbaipublicfiles.com/textvqa/data/TextVQA_0.5.1_train.json", file: TextVQA_0.5.1_train.json}
+      - {url: "https://dl.fbaipublicfiles.com/textvqa/data/TextVQA_0.5.1_val.json", file: TextVQA_0.5.1_val.json}
+      - {url: "https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip", file: train_val_images.zip}
+
+  sonyc_ust:
+    description: SONYC Urban Sound Tagging v2 — 18,510 ten-second city recordings, each tagged for 23 sound classes by three volunteers
+    source: https://zenodo.org/records/3966543 (Cartwright et al. 2020)
+    license: CC-BY-4.0
+    tier: R
+    note: >-
+      Licence read on Zenodo on 2026-10-29: CC BY 4.0. annotations.csv has one row per annotator (volunteer ids > 0,
+      SONYC team < 0, agreed ground truth 0); targets come from the volunteers' rows.
+    fetch:
+      - {url: "https://zenodo.org/records/3966543/files/annotations.csv", file: annotations.csv}
+      - {url: "https://zenodo.org/records/3966543/files/dcase-ust-taxonomy.yaml", file: dcase-ust-taxonomy.yaml}
+      - {url: "https://zenodo.org/records/3966543/files/audio-0.tar.gz", file: audio-0.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-1.tar.gz", file: audio-1.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-2.tar.gz", file: audio-2.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-3.tar.gz", file: audio-3.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-4.tar.gz", file: audio-4.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-5.tar.gz", file: audio-5.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-6.tar.gz", file: audio-6.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-7.tar.gz", file: audio-7.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-8.tar.gz", file: audio-8.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-9.tar.gz", file: audio-9.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-10.tar.gz", file: audio-10.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-11.tar.gz", file: audio-11.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-12.tar.gz", file: audio-12.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-13.tar.gz", file: audio-13.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-14.tar.gz", file: audio-14.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-15.tar.gz", file: audio-15.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-16.tar.gz", file: audio-16.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-17.tar.gz", file: audio-17.tar.gz}
+      - {url: "https://zenodo.org/records/3966543/files/audio-18.tar.gz", file: audio-18.tar.gz}
+
+  emozionalmente:
+    description: Emozionalmente — 6,902 Italian acted sentences, each judged by 5 listeners for the emotion they hear
+    source: https://zenodo.org/records/6569824 (Catania et al., Politecnico di Milano)
+    license: CC-BY-4.0
+    tier: R
+    note: >-
+      Licence read on Zenodo on 2026-10-29: CC BY 4.0. Targets are the listeners' recognised emotions; the actors' and
+      evaluators' demographics files are never read.
+    fetch:
+      - {url: "https://zenodo.org/records/6569824/files/emozionalmente_dataset.zip", file: emozionalmente_dataset.zip}
+
+  odaq:
+    description: ODAQ — 240 audio excerpts, each rated for quality (MUSHRA, 0-100) by 26 expert listeners after screening
+    source: https://zenodo.org/records/10405774 (Torcoli et al. 2024, Fraunhofer IIS and Netflix)
+    license: NOASSERTION
+    tier: X
+    override: >-
+      Mixed per file: CC BY, CC BY-NC and CC0 (record read on Zenodo on 2026-10-29; per-file terms in the package's
+      _detailed_license.csv). Held out as a frozen audio suite, evaluation only, and only its CC BY and CC0 files are
+      used.
+    fetch:
+      - {url: "https://zenodo.org/records/10405774/files/ODAQ.zip", file: ODAQ.zip}
 
   civil_comments:
     description: Civil Comments (Jigsaw) — public comments with the share of raters marking each toxicity attribute

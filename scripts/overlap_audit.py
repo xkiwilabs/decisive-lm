@@ -22,7 +22,7 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 SUITE = ["helpsteer3", "measuring_hate_speech", "cuad", "massive"]
 TRAINABLE = ["banking77", "banking77_explode", "clinc150", "clinc150_explode", "helpsteer2", "civil_comments",
              "civil_comments_human_matched", "goemotions", "ledgar", "synth_v1", "synth_v2", "synth_v3",
-             "measuring_hate_speech", "multinli"]
+             "measuring_hate_speech", "multinli", "synth_v4", "vizwiz_vqa", "helpsteer2_preference"]
 N = 8
 _WORD = re.compile(r"\w+")
 

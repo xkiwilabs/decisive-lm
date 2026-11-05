@@ -138,3 +138,8 @@ def test_tree_pass_with_audio_matches_the_stock_model_on_each_path(audio_dlm):
 def test_unusual_sample_rates_are_refused_before_decoding():
     with pytest.raises(ValueError, match="unsupported audio"):
         load_audio(Media(type="audio", data=wav_b64(tone(0.2, sr=12_345), sr=12_345)))
+
+
+def test_unreadable_audio_is_a_value_error():
+    with pytest.raises(ValueError, match="not a readable sound file"):
+        load_audio(Media(type="audio", data=base64.b64encode(b"not a sound file at all").decode()))

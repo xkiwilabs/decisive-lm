@@ -57,7 +57,8 @@ def teacher_logits(q, ans) -> torch.Tensor:
 
 
 def load_teacher_config(name: str) -> dict:
-    return yaml.safe_load((CONFIGS / "teachers.yaml").read_text())["teachers"][name]
+    from decisivelm.model import check_origin
+    return check_origin(yaml.safe_load((CONFIGS / "teachers.yaml").read_text())["teachers"][name], f"teacher {name}")
 
 
 class Schedule:

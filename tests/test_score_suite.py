@@ -123,10 +123,45 @@ def test_the_per_task_step_softens_an_overconfident_method_and_leaves_its_raw_an
         top = k if i % 2 else (k + 1) % 3
         d = {str(j): 0.96 if j == top else 0.02 for j in range(3)}
         answers[r.id] = {"q": (d, {str(j): 1 / 3 for j in range(3)})}
-    after, scales = ss.per_task(answers, rows, rows[:100])
+    after, scales, forms = ss.per_task(answers, rows, rows[:100])
+    assert forms == {}
     assert set(scales) == {"score"} and scales["score"] > 1
     before = ss.Task("t", "score", rows, {"candidate": answers}).metrics("candidate", np.arange(len(rows)))
     task = ss.Task("t", "score", rows, {"candidate": after})
     m = task.metrics("candidate", np.arange(len(rows)))
     assert m["ECE"] < before["ECE"] and m["Brier raw"] == before["Brier raw"]
     assert (task.m["candidate"]["pred"] == ss.Task("t", "score", rows, {"candidate": answers}).m["candidate"]["pred"]).all()
+
+
+def test_p0_is_the_candidates_own_backbone_prompted(monkeypatch):
+    for backbone, p0 in [("e4b", "gemma4_e4b"), ("26b-a4b", "gemma4_26b_a4b")]:
+        monkeypatch.setattr(ss, "bundle_backbone", lambda bundle, b=backbone: b)
+        assert ss.baselines("any") == {"P0": p0, "teacher": "gemma4_26b_a4b"}
+
+
+def overconfident_score_answers(rows, raw_level):
+    """0.96 on one level, right half the time; before calibration all mass on `raw_level` (None: uniform)."""
+    answers = {}
+    for i, r in enumerate(rows):
+        k = (i // 3) % 3
+        top = k if i % 2 else (k + 1) % 3
+        d = {str(j): 0.96 if j == top else 0.02 for j in range(3)}
+        raw = {str(j): 1 / 3 for j in range(3)} if raw_level is None else {str(j): float(j == raw_level) for j in range(3)}
+        answers[r.id] = {"q": (d, raw)}
+    return answers
+
+
+def test_the_guard_keeps_the_scale_where_it_helps():
+    rows = [NS(split="gold_test", **vars(r)) for r in score_rows(600)]
+    answers = overconfident_score_answers(rows, raw_level=0)   # raw answers are worse still: certain and often wrong
+    plain, plain_scales, _ = ss.per_task(answers, rows, rows[:100])
+    after, scales, forms = ss.per_task(answers, rows, rows[:100], guard=True)
+    assert forms == {"score": "scaled"} and scales == plain_scales and after == plain
+
+
+def test_the_guard_falls_back_when_the_step_would_make_brier_worse():
+    rows = [NS(split="gold_test", **vars(r)) for r in score_rows(600)]
+    answers = overconfident_score_answers(rows, raw_level=None)   # uniform raw answers beat 0.96-on-a-coin-flip
+    after, scales, forms = ss.per_task(answers, rows, rows[:100], guard=True)
+    assert forms == {"score": "raw"} and scales == {}
+    assert all(after[r.id]["q"][0] == answers[r.id]["q"][1] for r in rows)

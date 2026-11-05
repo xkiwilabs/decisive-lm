@@ -41,6 +41,10 @@ audio = [
     "scipy>=1.18.1",
     "soundfile>=0.14.0",
 ]
+serve = [
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+]
 
 [dependency-groups]
 dev = [

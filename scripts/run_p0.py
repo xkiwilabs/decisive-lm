@@ -21,11 +21,14 @@ REPO = pathlib.Path(__file__).resolve().parent.parent
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", type=pathlib.Path, required=True)
-    ap.add_argument("--backbone", default="e4b")
-    ap.add_argument("--question", default="intent")
-    ap.add_argument("--splits", nargs="+", default=["gold_calib", "gold_test"])
-    ap.add_argument("--chunk", type=int, default=48)
+    ap.add_argument("--data", type=pathlib.Path, required=True,
+                    help="the rows to label (a data/processed/<name>.jsonl file)")
+    ap.add_argument("--backbone", default="e4b",
+                    help="the frozen model that answers: e4b or 26b-a4b (configs/model.yaml)")
+    ap.add_argument("--question", default="intent", help="the id of the Choice question to answer (one per run)")
+    ap.add_argument("--splits", nargs="+", default=["gold_calib", "gold_test"],
+                    help="splits to answer; gold_calib fits the temperature")
+    ap.add_argument("--chunk", type=int, default=48, help="rows prompted per batch; progress is saved after each")
     a = ap.parse_args()
 
     rows = [r for r in load_records(a.data) if r.split in a.splits]

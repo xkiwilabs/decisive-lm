@@ -73,3 +73,23 @@ def test_the_package_exports_decisivelm_with_its_loader():
     import decisivelm
     from decisivelm.bundle import load_bundle
     assert decisivelm.DecisiveLM is DecisiveLM and DecisiveLM.load.__doc__ and load_bundle
+
+
+def test_a_question_type_the_bundle_never_trained_on_is_answered_with_a_warning(tmp_path):
+    torch.save(Scorer(64).state_dict(), tmp_path / "scorer.pt")
+    (tmp_path / "calibration.json").write_text(json.dumps({"temperatures": {"choice:*": 1.0},
+                                                           "question_types": {"choice": 40}}))
+    dlm = attach_bundle(tmp_path, tiny_decoder("dense", "sdpa", vocab=len(tokenizer())), tokenizer())
+    dlm.system_one(REQ)
+    assert dlm.warnings == []
+    req = {**REQ, "questions": {**REQ["questions"], "u": {"type": "noul", "instructions": "The API is down"}}}
+    with pytest.warns(UserWarning, match="never trained on noul"):
+        dlm.system_one(req)
+    assert len(dlm.warnings) == 1 and dlm.warnings[0].startswith("u: ")
+
+
+def test_an_older_bundle_takes_its_trained_types_from_its_calibration():
+    from decisivelm.bundle import trained_types
+    assert trained_types({"temperatures": {"choice:*": 1.0, "choice:3-5": 1.1}}) == {"choice"}
+    assert trained_types({"temperatures": {"noul": 1.0, "score:*": 1.0}, "question_types": {"noul": 3}}) == {"noul"}
+    assert trained_types({"temperatures": {}}) is None

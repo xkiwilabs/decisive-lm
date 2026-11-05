@@ -182,6 +182,8 @@ def train_adapter(dlm, train: list[Item], val: list[Item], *, epochs: int, rows_
             group = order[start:start + rows_per_step]
             for b in micro_batches(group, max_tokens, rng):
                 losses = batch_losses(dlm, b, grad=True)
+                if not losses.numel():
+                    continue
                 (losses.sum() / len(group)).backward()
                 window.append(losses.detach().cpu())
             torch.nn.utils.clip_grad_norm_(lora + head, 1.0)

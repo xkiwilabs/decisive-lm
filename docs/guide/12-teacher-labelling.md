@@ -1,10 +1,13 @@
 # 12. Teacher labelling
 
 A *teacher* is a larger open model that labels rows which have no human answers, so that the head can learn from
-many more examples than people could rate. DecisiveLM asks the teacher through a vLLM server's OpenAI-compatible API
-and reads probability distributions from its next-token log-probabilities, never a single sampled answer. This chapter
-covers how the teacher is prompted and how its answers become calibrated training targets. The same method, run on
-the student's own backbone, is the P0 baseline every model is compared with.
+many more examples than people could rate. DecisiveLM asks the teacher through a vLLM server's OpenAI-compatible API.
+vLLM is an open-source server that runs a language model on a GPU and answers requests in the format of OpenAI's API.
+You can start one on your own GPU or use an existing one, named by `base_url` in the teacher's entry (12.1). A language
+model gives every token it could write next a probability, and the server returns the logarithms of the most likely
+ones (*log-probabilities*). The labeller reads a probability distribution over the answer labels from them, never a
+single sampled answer. This chapter covers how the teacher is prompted and how its answers become calibrated training
+targets. The same method, run on the student's own backbone, is the P0 baseline every model is compared with.
 
 ## 12.1 The teacher and its configuration
 
@@ -17,11 +20,11 @@ the labeller needs and what every teacher target stores:
 | `base_url`, `model` | The server's OpenAI-compatible endpoint (`…/v1`) and the served model name |
 | `revision` | The Hugging Face revision of the served weights, stored in every target |
 | `tokenizer_backbone` | The `configs/model.yaml` profile whose tokenizer and chat template render the prompts |
-| `licence`, `developer`, `base_model_origin` | Licence and origin, for the model-origin rule (16.3) |
+| `licence`, `developer`, `base_model_origin` | Licence and origin, for the model-origin rule (16.2) |
 | `modalities` | What the model accepts (`text`, `image`, `audio`) |
 | `vllm_version` | The server's vLLM version, stored in every target |
 | `max_logprobs` | How many top log-probabilities the server returns per token (vLLM's default is 20) |
-| `logprobs_mode` | `raw_logprobs`: log-probabilities before temperature and penalties |
+| `logprobs_mode` | `raw_logprobs`: log-probabilities before the server applies its sampling temperature and penalties. This sampling temperature is unrelated to the calibration temperatures of 12.9 |
 | `prefix_caching` | Whether the server caches shared prompt prefixes (it should) |
 | `api_key_env` | The environment variable holding the server's API key, sent as a bearer token when set; `null` for a server without one |
 | `schedule` | How many requests to keep open, by time of day (12.7) |
@@ -35,8 +38,8 @@ Any other open model can be added the same way. A teacher must:
 ## 12.2 How a question is asked
 
 The labeller and the student see the same input. Both call `decisivelm/preprocess.py` on the serialised state, so a
-long state is truncated identically for both (8,192 tokens by default, keeping the head and the tail). Any difference
-in what they saw would become label noise.
+long state is truncated identically for both (8,192 tokens by default, with 70% of that budget taken from the start of
+the state and 30% from its end). Any difference in what they saw would become label noise.
 
 Each question type has a versioned prompt template in `decisivelm/synth/prompts/`:
 
@@ -50,11 +53,11 @@ Each question type has a versioned prompt template in `decisivelm/synth/prompts/
 All four work the same way:
 
 - the prompt is rendered with the teacher's own chat template;
-- thinking is turned off;
+- thinking (Gemma 4's option to write out its reasoning before it answers) is turned off;
 - the assistant turn is pre-filled with `Answer:` (or `Answer: ` for numbered options).
 
-The next token the model would write is therefore the label itself, not formatting. The labeller asks the server for
-that one token's top log-probabilities (`/v1/completions` with the prompt sent as token ids, `max_tokens: 1`,
+The next token the model would write is therefore the label itself, not reasoning or formatting. The labeller asks the
+server for that one token's top log-probabilities (`/v1/completions` with the prompt sent as token ids, `max_tokens: 1`,
 `temperature: 0`). It then reads the probability of each allowed label.
 
 In every template the state comes last. Everything before it (instructions, question, options) is the same for every
@@ -91,10 +94,10 @@ requests per ordering.
 
 ## 12.4 Score
 
-A Score's levels are ordered, so they are never shuffled: shuffling would set the teacher a different task from the
-one the student learns. Each Score is asked twice, with the levels lettered in natural order (A = the first level) and
-in reversed order (A = the last). The two distributions are mapped back to levels and averaged, which cancels a
-preference for the first or last letter.
+A Score's levels are ordered, and shuffling them would set the teacher a different task from the one the student
+learns, so they are never shuffled. Each Score is asked twice, with the levels lettered in natural order (A = the first
+level) and in reversed order (A = the last). The two distributions are mapped back to levels and averaged, which
+cancels a preference for the first or last letter.
 
 ## 12.5 Noul
 
@@ -111,8 +114,8 @@ says little.
 
 - Orderings or phrasings with allowed mass below **0.5** are left out of the average.
 - If none of them reaches 0.5, all are kept, and the row records its low mean allowed mass.
-- When teacher targets are written (12.9), a question whose mean allowed mass is below 0.5 gets no target and is
-  masked in the loss.
+- When teacher targets are written (12.9), a question whose mean allowed mass is below 0.5 gets no target. It is
+  masked in the loss, so it adds nothing to the training loss while the row's other questions still train.
 
 Every result records the method (`logprob`), the number of orderings asked and kept, and the mean allowed mass.
 
@@ -141,8 +144,9 @@ uv run python scripts/label_teacher.py --teacher gemma4_26b_a4b \
 
 Every output line records the teacher model, its revision, the vLLM version, `max_logprobs` and the SHA-256 hash of
 each prompt template. A label can always be traced to the exact prompt and weights that produced it. A mixture-of-experts
-teacher's log-probabilities can vary slightly with what else the server is batching, so results are compared as
-distributions, not as exact numbers.
+teacher such as Gemma 4 26B A4B sends each token to 8 of its 128 experts, and where two experts score almost equally,
+the choice can change with what else the server is batching (`results/M0.md`). Its log-probabilities for the same row
+can therefore differ between runs, so results are compared as distributions, not as exact numbers.
 
 **Sharing a server.** A labelling job can run on a server that other people use. The `schedule` block of a teacher
 limits how many requests are open at once:
@@ -166,20 +170,20 @@ Recommended server settings:
 Guided (constrained) decoding is not used, because the log-probabilities it returns may be taken before or after the
 constraint depending on the vLLM version.
 
-Rows with images or audio are skipped by the labeller: it labels text rows only.
+On a server, the labeller skips rows with images or audio and labels text rows only. To label those rows, run it
+locally with `--local` (section 12.8).
 
 ## 12.8 The same method as a baseline (P0)
 
 Prompting the student's own frozen backbone this way, with no training, is the **P0 baseline**. It is the number every
-trained model must be compared with, because it is what a user gets from the base model with no fine-tuning at all.
-There are two ways to run it:
+trained model must be compared with, because a user gets it from the base model with no fine-tuning.
+There are three ways to run it:
 
 - **On a vLLM server**: `scripts/label_teacher.py --teacher gemma4_e4b`, exactly as for the teacher.
 - **Locally, on one data file**: `scripts/run_p0.py --data … [--backbone e4b]` loads the backbone with transformers
   and scores one question per row (`--question`, default `intent`). It writes raw distributions to
   `data/predictions/P0_<data>_<backbone>_raw.jsonl`. When every item is done, it fits one temperature on `gold_calib`
   and writes calibrated predictions next to them.
-
 - **Locally, through the labeller**: `scripts/label_teacher.py --teacher gemma4_e4b --local` runs the same model on
   this machine's GPU, every question type, and also rows with images or audio, which the server path leaves out. Each
   row's media are encoded as the student encodes them and placed where the state starts
@@ -213,6 +217,10 @@ uv run python scripts/teacher_targets.py --data data/processed/synth_v1.jsonl --
             data/processed/helpsteer2.jsonl data/processed/civil_comments.jsonl data/processed/goemotions.jsonl
 ```
 
+`--set score=choice` gives Score the Choice temperature, chosen by judgement rather than fitted. Among these five
+datasets the only human Score labels are HelpSteer2's subjective ratings, and their temperature (9.8) would make every
+generated scale near-flat.
+
 | Option | Effect |
 |---|---|
 | `--splits` | Which splits receive teacher targets (default `train`; generated rows use `train val`) |
@@ -226,8 +234,8 @@ uv run python scripts/teacher_targets.py --data data/processed/synth_v1.jsonl --
 Each target records the method, orderings, allowed mass, teacher model and revision, vLLM version, prompt hash and
 the temperature applied (`calibrated_T`).
 
-Temperatures are always fitted on human-labelled rows, never on teacher-labelled ones: fitting on the teacher's own
-labels would calibrate the student to the teacher rather than to people.
+Temperatures are always fitted on human-labelled rows, never on teacher-labelled ones, because fitting on the
+teacher's own labels would calibrate the student to the teacher rather than to people.
 
 ## 12.10 What the teacher cannot fix
 

@@ -66,6 +66,19 @@ def attach_bundle(bundle: pathlib.Path, backbone, tokenizer) -> DecisiveLM:
         load_lora_state(backbone, torch.load(bundle / "adapter.pt", weights_only=True, map_location=device))
     scorer = Scorer(backbone.config.get_text_config().hidden_size)
     scorer.load_state_dict(torch.load(bundle / "scorer.pt", weights_only=True, map_location="cpu"))
-    return DecisiveLM(backbone.eval(), tokenizer, scorer.to(device).eval(),
-                      calibration=Calibration(temperatures=calib["temperatures"], b_noul=calib.get("b_noul", 0.0),
-                                              tasks=calib.get("tasks", {})), adapter=bundle.name)
+    return DecisiveLM(backbone.eval(), tokenizer, scorer.to(device).eval(), calibration=bundle_calibration(calib),
+                      adapter=bundle.name, trained_types=trained_types(calib))
+
+
+def trained_types(calib: dict) -> set[str] | None:
+    """The question types a bundle was trained on: recorded by train_p3 since 2026-10-29; for an older bundle, the
+    types its calibration fitted (calibration rows come from the same data). None when neither says."""
+    if "question_types" in calib:
+        return set(calib["question_types"])
+    return {k.split(":")[0] for k in calib.get("temperatures", {})} or None
+
+
+def bundle_calibration(calib: dict) -> Calibration:
+    """The Calibration a bundle's calibration.json records."""
+    return Calibration(temperatures=calib["temperatures"], b_noul=calib.get("b_noul", 0.0),
+                       tasks=calib.get("tasks", {}))

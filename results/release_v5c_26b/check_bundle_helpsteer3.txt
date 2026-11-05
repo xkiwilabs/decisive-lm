@@ -1,0 +1,18 @@
+[coord] held gpu1 as decisive-lm-57 (pid 1968363)
+Loading weights:   0%|          | 0/1013 [00:00<?, ?it/s]Loading weights:   2%|▏         | 25/1013 [00:00<00:04, 236.36it/s]Loading weights:   5%|▍         | 49/1013 [00:00<00:04, 223.37it/s]Loading weights:   9%|▉         | 92/1013 [00:00<00:03, 273.42it/s]Loading weights:  13%|█▎        | 135/1013 [00:00<00:02, 295.49it/s]Loading weights:  18%|█▊        | 178/1013 [00:00<00:02, 307.12it/s]Loading weights:  21%|██        | 209/1013 [00:00<00:02, 276.51it/s]Loading weights:  24%|██▍       | 245/1013 [00:00<00:02, 279.50it/s]Loading weights:  28%|██▊       | 288/1013 [00:01<00:02, 297.03it/s]Loading weights:  33%|███▎      | 332/1013 [00:01<00:02, 312.10it/s]Loading weights:  37%|███▋      | 376/1013 [00:01<00:01, 322.52it/s]Loading weights:  41%|████▏     | 419/1013 [00:01<00:01, 326.08it/s]Loading weights:  46%|████▌     | 463/1013 [00:01<00:01, 332.40it/s]Loading weights:  50%|█████     | 507/1013 [00:01<00:01, 337.70it/s]Loading weights:  54%|█████▍    | 549/1013 [00:01<00:01, 334.67it/s]Loading weights:  59%|█████▊    | 594/1013 [00:01<00:01, 341.12it/s]Loading weights:  63%|██████▎   | 638/1013 [00:02<00:01, 342.51it/s]Loading weights: 100%|██████████| 1013/1013 [00:02<00:00, 485.30it/s]
+5966 rows, 5966 questions: answer agrees on 5948; max |Δp| = 4.11e-02; last latency 523.7 ms for 1296 tokens, 6 blocks
+conformance: 100%
+agreement with the written predictions (float32, tolerance 0.001): FAILS
+  helpsteer3-train-03326 preference: answer changed although the written margin was 0.012
+  helpsteer3-train-12909 preference: answer changed although the written margin was 0.021
+  helpsteer3-train-13297 preference: answer changed although the written margin was 0.005
+  helpsteer3-train-16896 preference: answer changed although the written margin was 0.026
+  helpsteer3-train-19053 preference: answer changed although the written margin was 0.007
+  helpsteer3-train-21187 preference: answer changed although the written margin was 0.007
+  helpsteer3-train-23375 preference: answer changed although the written margin was 0.006
+  helpsteer3-train-24194 preference: answer changed although the written margin was 0.004
+  helpsteer3-train-25546 preference: answer changed although the written margin was 0.004
+  helpsteer3-train-29241 preference: answer changed although the written margin was 0.024
+  helpsteer3-train-34973 preference: answer changed although the written margin was 0.007
+  helpsteer3-validation-01448 preference: answer changed although the written margin was 0.012
+[coord] released gpu1 (exit 1)

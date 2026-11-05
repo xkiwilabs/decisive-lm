@@ -11,5 +11,15 @@ criteria for each version are in [docs/RELEASE.md](docs/RELEASE.md).
 - Fine-tuning from a trained bundle (`train_p3.py --init-bundle`, `--n-train`; guide 9.6).
 - New-task calibration scales for the general head (`recalibrate.py --new-task`; guide 10.6).
 - Exchange formats for a human-rating app (`export_for_rating.py`, `import_ratings.py`; docs/rating-formats.md).
-- No general head has been released yet. The first release (0.1.0) will be the first candidate that passes the
-  release criteria.
+- Task calibration of one question on about 100 of its own labelled items: a scale and an offset per option or level
+  (`task_calibrate.py`, `decisivelm.calibrate.fit_task_calibration`; guide 10.6).
+- Image questions in the general head's training mix (VizWiz-VQA), and image and audio fine-tunes (guide 9.9).
+- Audio sent to a backbone without audio input (26B A4B) is refused with a message saying so; the server answers
+  400.
+- One HelpSteer3 row of the frozen suite (`helpsteer3-train-34503`) is excluded: its text overlaps a dataset the next
+  release trains on (`configs/suite_exclusions.txt`; docs/RELEASE.md, change log 2026-11-05).
+- No general head has been released yet. The first release carries two heads trained on General v5c, each released
+  with its failures of the release criteria stated (docs/RELEASE.md, change log 2026-11-03 and 2026-11-05):
+  - the E4B head (`decisivelm-e4b-general`, docs/model-card.md), which fails three checks against the prompted E4B;
+  - the 26B A4B head (`decisivelm-26b-a4b-general`, docs/model-card-26b.md), which runs in float32 computation and
+    fails five checks against the prompted 26B A4B.

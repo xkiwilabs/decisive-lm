@@ -14,7 +14,8 @@ follow Alhasan, Diaz Monfort & Richardson, *Knowing which responses to check* (u
 ## 11.1 Ground rules
 
 - **Human labels only.** Reported results use the `gold_test` split (or a held-out dataset's test rows), scored against
-  human targets. Teacher-labelled `val` rows are used for model selection only.
+  human targets. `val` rows, which may be labelled by a teacher model ([chapter 12](12-teacher-labelling.md)), are used
+  for model selection only.
 - **Never choose on the test set.** Stopping rules, checkpoints, temperatures and prompts are chosen on `val` and
   `gold_calib`. A number from `gold_test` is reported, not optimised.
 - **Always against a baseline.** P0, the frozen backbone prompted per question ([chapter 9](09-fine-tuning-for-your-task.md)),
@@ -31,37 +32,38 @@ functions):
 
 **Choice**
 
-| Metric | Meaning |
-|---|---|
-| accuracy | Top option matches the raters' unique plurality. |
-| macro-F1 | F1 per option, averaged with every option weighted equally, so rare options count. |
-| soft NLL | Cross-entropy against the raters' shares, divided by `log n` (uniform = 1). |
-| ECE | Top-label expected calibration error, 15 bins ([chapter 10](10-calibration.md)). |
-| Brier | Squared distance to the one-hot label, summed over options. |
-| conf AUROC | How well the top probability separates right answers from wrong ones (0.5 = no better than chance). |
-| `other` accuracy | Accuracy on items whose answer is a catch-all `other` option, reported separately because such an option cannot see its siblings. |
+| Metric | Meaning | Good |
+|---|---|---|
+| accuracy | Top option matches the raters' unique plurality. | Higher |
+| macro-F1 | F1 per option, averaged with every option weighted equally, so rare options count. | Higher |
+| soft NLL | Soft negative log-likelihood: the mean of −log p over the raters' answers (the cross-entropy against their shares), divided by `log n`. It is lowest when the probabilities match the shares. | Lower. A uniform guess scores 1. |
+| ECE | Top-label expected calibration error, 15 bins ([chapter 10](10-calibration.md)). | Lower. Well under 0.1 is usable for thresholds (§11.5). |
+| Brier | Squared distance to the one-hot label (1 for the human answer, 0 for every other option), summed over options. | Lower. 0 is perfect. |
+| conf AUROC | AUROC (area under the ROC curve) of the top probability for right against wrong answers: the chance that a random right answer has a higher top probability than a random wrong one. | Higher. 0.5 is chance, 1 is perfect. |
+| `other` accuracy | Accuracy on items whose answer is a catch-all `other` option, reported separately because such an option cannot see its siblings. | Higher |
 
 **Score**
 
-| Metric | Meaning |
-|---|---|
-| MAE | Mean absolute difference between the predicted score (`Σ level × p`) and the raters' mean level. |
-| exact | Most likely level matches the raters' unique plurality. |
-| EMD | Earth mover's distance: the summed gap between the predicted and human cumulative distributions over levels. It penalises mass placed far from the human levels more than mass placed nearby. |
-| soft NLL | As for Choice. |
+| Metric | Meaning | Good |
+|---|---|---|
+| MAE | Mean absolute difference between the predicted score (`Σ level × p`) and the raters' mean level. | Lower. 0 is perfect. |
+| exact | Most likely level matches the raters' unique plurality. | Higher |
+| EMD | Earth mover's distance: the summed gap between the predicted and human cumulative distributions over levels. It penalises mass placed far from the human levels more than mass placed nearby. | Lower. 0 is perfect. |
+| soft NLL | As for Choice. | Lower |
 
 **Noul**
 
-| Metric | Meaning |
-|---|---|
-| AUROC | How well `p(yes)` separates items humans call yes from items they call no. |
-| acc@.5 | Answer at the 0.5 threshold matches the human side. |
-| Brier, ECE | Calibration of `p(yes)`; ECE uses `max(p, 1 − p)` as the confidence. |
-| soft BCE | Binary cross-entropy against the yes-share. |
-| ρ(p, share) | Spearman correlation between `p(yes)` and the human yes-share: does the model's probability rise with the share of people saying yes? |
+| Metric | Meaning | Good |
+|---|---|---|
+| AUROC | How well `p(yes)` separates items humans call yes from items they call no. | Higher. 0.5 is chance. |
+| acc@.5 | Answer at the 0.5 threshold matches the human side. | Higher |
+| Brier, ECE | Calibration of `p(yes)`. ECE uses `max(p, 1 − p)` as the confidence. | Lower |
+| soft BCE | Binary cross-entropy against the yes-share. | Lower. A constant 0.5 scores log 2 ≈ 0.693. |
+| ρ(p, share) | Spearman correlation between `p(yes)` and the human yes-share: does the model's probability rise with the share of people saying yes? | Positive, higher |
 
-**Primary metric per type:** Choice accuracy, Score MAE (lower is better) and Noul AUROC. Gates and "beats" are
-decided on these. For a dataset with several questions of a type, the primary metric is averaged over them.
+**Primary metric per type:** Choice accuracy, Score MAE (lower is better) and Noul AUROC. Release gates (the pass
+marks of [chapter 15](15-release-criteria.md)) and "beats" (§11.1) are decided on these. For a dataset with several
+questions of a type, the primary metric is averaged over them.
 
 ## 11.3 Review readiness
 
@@ -75,7 +77,7 @@ values 0, .17, .33, .5 and 1; with three raters, 0, ⅓ and 1. It is computed fr
 | Metric | Question it answers | Good |
 |---|---|---|
 | **ρ(top p, agreement)** | Spearman correlation between the model's top probability and per-item agreement. Is the model surer where people agree? | Positive, higher |
-| **Within-category ρ** | The same correlation inside each consensus category (each label the raters converged on) with at least 25 items. Only this shows item-level tracking: an overall ρ can arise just from some categories being harder than others. | Positive in every category |
+| **Within-category ρ** | The same correlation inside each consensus category (each label the raters converged on) with at least 25 items. Only this shows item-level tracking, because an overall ρ can arise entirely from some categories being harder than others. | Positive in every category |
 | **Tie AUROC** | How well low confidence finds the items with no unique human majority (ties). | Above 0.5, higher |
 | **Dynamic range** | Highest minus lowest mean top probability across agreement levels. A signal running from .986 to .998 ranks items but cannot carry a review threshold. | At least 0.2 |
 | **Confidence-guided review** | Send the least confident fraction *f* of all items to a person. Report the share of the model's errors inside the reviewed set ("errors caught") and the accuracy of the unreviewed rest. Tied items are ranked like any other but counted in neither figure. | Many errors caught, high rest accuracy |
@@ -84,10 +86,13 @@ values 0, .17, .33, .5 and 1; with three raters, 0, ⅓ and 1. It is computed fr
 Two confidence **signals** are reported:
 
 - **top p:** the probability of the chosen option.
-- **1 − H(p)/log n:** read from the spread of the whole distribution (`decisivelm.eval.entropy_confidence`).
+- **1 − H(p)/log n:** one minus the distribution's entropy H(p), scaled to run from 0 for a uniform distribution to 1
+  when all the probability is on one option. It reads confidence from the spread of the whole distribution
+  (`decisivelm.eval.entropy_confidence`).
 
 A model whose errors are spread evenly through its confidence ranking catches about *f* of its errors with a review of
-fraction *f*. A review-ready model catches far more.
+fraction *f*. A review-ready model catches more. The fine-tunes in [chapter 9](09-fine-tuning-for-your-task.md)
+(section 9.6) caught 0.51 to 0.80 of their errors with a 20% review.
 
 Where these are computed:
 
@@ -129,6 +134,10 @@ The report has one table per question:
 | Method | soft NLL | accuracy | macro-F1 | ECE | Brier | conf AUROC | errors in review 20% | rest acc 20% | ρ(top p, agreement) | tie AUROC | accuracy 95% CI | Δaccuracy vs ref | 95% CI |
 ```
 
+A question asked on only some rows is scored on those rows, and its heading says on how many
+(`## team (choice, 3 options; asked on 120 rows)`). Rows that use one question id with different options, such as a
+yes/no question beside four-option ones, get one table for each set of options.
+
 Read it in this order:
 
 1. **Coverage.** The header says how many rows every method answered. A method that skipped items is not comparable.
@@ -141,15 +150,19 @@ Read it in this order:
 Things to keep in mind:
 
 - A few hundred items give wide intervals. An ECE difference of 0.02 is rarely significant at that size.
-- On items where raters tie, no answer is wrong; those items are excluded from accuracy, not counted against the
+- The intervals cover the sampling of test items, not the randomness of training. Fine-tunes that differ only in
+  `--seed` can differ by more than an interval: three from the base model on the same 100 coding items reached
+  ρ(top p, agreement) of 0.44, 0.45 and 0.53 (`results/c8_general_v5c_e4b_r8_seed0.md`). Before choosing between two
+  training setups, train each with two or three seeds and compare their spread.
+- On items where raters tie, no answer is wrong. Those items are excluded from accuracy, not counted against the
   model.
 - A dataset that has been used to choose between models is a **development set**. Its numbers are reported as such,
   and claims about new tasks rest on held-out data ([chapter 15](15-release-criteria.md)).
 
 ## 11.6 Comparing with human coders
 
-Agreement with a consensus label is not the whole story for a coding task: the useful comparison is with the coders
-themselves. `scripts/compare_coding.py` reports:
+For a coding task, compare the model with each coder as well as with the consensus label. `scripts/compare_coding.py`
+reports:
 
 - **Cohen's κ** against each coder separately, averaged, with a bootstrap interval. κ is agreement corrected for
   chance agreement.
@@ -160,8 +173,11 @@ themselves. `scripts/compare_coding.py` reports:
 - **Review readiness** (§11.3), and the paired differences from `--reference`.
 
 It reads the coders' own labels from a CSV with one column per coder (`--codes`), and the models' predictions as
-`NAME=path` pairs. The script is written for a table laid out like the coding study's: the coder columns are listed
-in `HUMANS`, and each row's id is built from its participant and trial columns. Adapt both to your table.
+`NAME=path` pairs. The script is written for the coding study's table. The coder column names are fixed in its `HUMANS`
+list, each row's id is built as `lrc-<SubjectID>-<TrialNumber>`, and `--question` defaults to `intent`. To use it on
+your own coders, change the `HUMANS` list to your coder columns, change the two places that build row ids from
+`SubjectID` and `TrialNumber` (one for `--codes`, one for `--baselines`) so the ids match your rows' `id`s, and pass
+`--question`.
 
 ```bash
 uv run python scripts/compare_coding.py --data data/processed/my_coding_task.jsonl --codes coders.csv \
@@ -184,17 +200,17 @@ its accuracy.
 Responses are validated as they are built, and the test suite checks conformance on a tiny random Gemma 4
 configuration (`uv run pytest`).
 
-**Independence and order.** Each option is scored in its own attention branch, so these must leave an answer
-unchanged:
+**Independence and order.** Each option is scored in its own attention branch ([chapter 6](06-how-it-works.md),
+section 6.2), so these must leave an answer unchanged:
 
 - adding or removing other questions;
 - shuffling a Choice question's options;
 - renaming a question id;
 - packing another request alongside.
 
-In exact arithmetic the change is zero. In practice the tests allow 1e-5 in fp32. In bf16 the allowance is set from
-the measured rounding noise. The test suite checks this on the tiny configuration. On a trained bundle and the real
-backbone, measure what a user would see:
+In exact arithmetic the change is zero. In practice the tests allow 1e-5 in fp32 (32-bit floating point). In bf16
+(16-bit, the default for training and serving), the allowance is set from the measured rounding noise. The test suite
+checks this on the tiny configuration. On a trained bundle and the real backbone, measure what a user would see:
 
 ```bash
 uv run python scripts/check_invariance.py --bundle bundles/P3_my_task_e4b_r8_seed0 --data data/processed/my_task.jsonl \
@@ -216,9 +232,15 @@ For a sample of rows it compares every answer with the same answer under these v
 | top-p rank ρ | Rank correlation of the top probability before and after: is the order of confidence stable? |
 | review-set churn (20%) | Share of the 20% least confident items that would change |
 
-On the dense E4B backbone these are small. On the 26B A4B mixture-of-experts backbone, bf16 rounding can flip a token's
-choice of experts when the packing changes. `--dtype float32` shows how much of the movement is rounding, and fp32
-inference removes most of it.
+On the dense E4B backbone ([chapter 6](06-how-it-works.md), section 6.9) in bf16, rounding alone moved probabilities by
+about 0.03 on average and by up to 0.39 on one item, and 3–4 of 100 coding answers flipped when the options were
+reversed or another request was packed first. In fp32 every change was below 0.0002 and no answer flipped
+(`results/invariance.md`). On the released general head, over every request of the frozen suite, no probability moved by
+more than 0.02 ([model card](../model-card.md), criterion 5); on the 26B A4B general head, computed in float32, none
+moved by more than 0.011 ([model card](../model-card-26b.md)). On the 26B A4B mixture-of-experts backbone, bf16 rounding
+can also flip a token's choice of experts when the packing changes, which makes the movement about five times larger.
+`--dtype float32` shows how much of the movement is rounding. Where a single flipped answer matters, load the bundle in
+fp32 with `DecisiveLM.load(bundle, dtype=torch.float32)`. On Apple silicon this is about four times slower.
 
 `scripts/check_bundle.py` complements this. It confirms that a saved bundle, reloaded through `DecisiveLM.system_one`,
 reproduces the predictions written at training time for every question, and that every response conforms

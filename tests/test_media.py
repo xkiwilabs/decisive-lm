@@ -182,3 +182,15 @@ def test_dropped_pixels_reload_identically(vision_dlm, tmp_path):
     drop.images[0].drop_pixels()
     assert drop.images[0].pixel_values is None
     assert torch.equal(vision_dlm.logits([keep])[1], vision_dlm.logits([drop])[1])
+
+
+def test_data_urls_are_accepted_and_unreadable_images_are_value_errors():
+    buf = io.BytesIO()
+    random_image(3).save(buf, format="PNG")
+    raw = base64.b64encode(buf.getvalue()).decode()
+    plain = load_image(Media(type="image", data=raw))
+    assert load_image(Media(type="image", data="data:image/png;base64," + raw)).tobytes() == plain.tobytes()
+    with pytest.raises(ValueError, match="not valid base64"):
+        load_image(Media(type="image", data="not base64!"))
+    with pytest.raises(ValueError, match="not a readable image"):
+        load_image(Media(type="image", data=base64.b64encode(b"%PDF-1.4 not an image").decode()))
