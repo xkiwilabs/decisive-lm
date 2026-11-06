@@ -192,6 +192,10 @@ with rater agreement from −0.010 to +0.349 ([model card](../model-card.md)).
 - Screening and extraction expressed as Nouls ("the document mentions a termination date").
 - Measuring a task before deciding whether to fine-tune.
 
+Each model card's table of use cases gives an example question for each kind of task, what was measured on it and
+what it was compared against: the prompted base model (P0), a fine-tune or human coders
+([E4B](../model-card.md#use-cases), [26B A4B](../model-card-26b.md#use-cases)).
+
 ## 7.9 Out-of-scope uses
 
 - **Decisions about people without your own checks.** Do not use the head, unreviewed, for clinical, credit, hiring,

@@ -141,7 +141,7 @@ Then follow [2. Installation](docs/guide/02-installation.md) to fetch the Gemma 
 | [15. Release criteria](docs/guide/15-release-criteria.md) | The frozen held-out suite and the bar each release must clear |
 | [16. Provenance, licences and responsible use](docs/guide/16-provenance-licences-and-responsible-use.md) | Clean-room and model-origin rules, licences, intended and out-of-scope uses |
 | [17. Reference](docs/guide/17-reference.md) | Every script, config and module |
-| [Model card](docs/model-card.md) | The general head: intended use, training, evaluation, limitations |
+| [Model card](docs/model-card.md) | The E4B general head: use cases with what was measured on each, training, evaluation, limitations |
 | [26B A4B model card](docs/model-card-26b.md) | The 26B A4B general head, compared with the prompted 26B A4B and the E4B head |
 
 Every dataset, with its licence, tier and role, is listed in [14. Datasets](docs/guide/14-datasets.md).
