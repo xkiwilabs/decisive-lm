@@ -14,9 +14,6 @@ tags:
   - gemma4
 ---
 
-<!-- DRAFT 2026-11-03: E4B sections rewritten for General v5c. Version 0.1 (owner, 2026-11-04). The 26B A4B head
-also ships in 0.1 (owner, 2026-11-05, RELEASE.md); it gets its own card. -->
-
 # DecisiveLM E4B general head 0.1 (preview)
 
 A general-purpose decision head for Google's Gemma 4 E4B (a small model with about 4B effective parameters, the "E"
@@ -191,8 +188,10 @@ and labels rows that have no human answers (guide chapter 12). The mix is Genera
 | Teacher-written question sets and states | question sets in many settings (support, finance, moderation, documents, qualitative coding of free-text answers and more), with states written to be easy, borderline, ambiguous, irrelevant or open-ended, and plainly worded Scores with a neutral middle; and new question sets about real states of the public datasets | Gemma 4 26B A4B's label probabilities, averaged over option orderings and calibrated on human labels |
 
 Each release publishes its mix manifest: every source, its licence, the row counts per split and the sha256 of the mix.
-The public datasets are linked rather than re-hosted, and the teacher-written rows and their labels are published in the
-companion dataset repository on Hugging Face (`decisive-lm-data`, tagged with the release version, guide §14.7).
+The public datasets are linked rather than re-hosted. The teacher-written rows and their labels are published under CC
+BY 4.0 in the companion dataset repository on Hugging Face (`decisive-lm-data`, tagged with the release version, guide
+§14.7). A row whose state is a public dataset's item is published without that state, which is rebuilt from its source
+by id. The 1,442 such rows whose questions quote that item are not published.
 Details:
 [guide chapter 13](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/13-how-the-general-head-was-trained.md)
 and [chapter 14](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/14-datasets.md).
@@ -318,14 +317,20 @@ P0 is calibrated the same way as the head.
 | MultiNLI (5 annotators per pair; held out) | review readiness on a task outside the mix | ρ 0.323 (Choice), 0.200 (Score); errors caught 47.2% (Choice) | ρ 0.261, 0.169; errors caught 39.2% |
 | Wikipedia toxicity (about 10 raters per comment; held out) | review readiness on an unseen two-sided social scale | ρ −0.010; tie AUROC 0.531; MAE 0.462 | ρ +0.057; tie AUROC 0.539; MAE 0.355 |
 
-**How much of this is training noise.** A second training run with only the seed changed differs from this one by
-about as much as two different mixes do on the text development sets. For example, on Humicroedit (a humour-rating set
-held out of training) the MAE moves by 0.06 between seeds, against 0.08 between the v5c and v5a mixes, and on the
-sarcasm corpus it moves by 0.06 between seeds. The second run against this one:
-- On the coding study, its ρ is 0.373 against this head's 0.206, and the errors it catches in review are 49.2%
-  against 60.6%.
-- On Wikipedia toxicity, its ρ is −0.175 against −0.010.
-- Its κ on the coding study (0.684) and its photo results are close to this head's.
+**How much of this is training noise.** Two more training runs with only the seed changed (seeds 1 and 2) differ
+from this one by about as much as two different mixes do on the text development sets. For example, on Humicroedit (a
+humour-rating set held out of training) the MAE moves by up to 0.06 between seeds, against 0.08 between the v5c and
+v5a mixes, and on the sarcasm corpus it moves by up to 0.06. The other two runs against this one:
+- On Wikipedia toxicity, their ρ is −0.175 and −0.142, against this head's −0.010.
+- On DailyDialog (emotion in dialogue, one of the seven benchmarks), seed 2 is 7.4 points less accurate (57.1%
+  against 64.5%), and seed 1 is 1 point more accurate.
+- Their photo results are close to this head's: answerable AUROC 0.930 and 0.930 against 0.933, and four-option
+  accuracy 68.9% and 71.9% against 71.1%.
+- On the coding study, seed 1's ρ is 0.373 against this head's 0.206, and the errors it catches in review are 49.2%
+  against 60.6%. Seed 2 has not been scored there.
+
+Across the three runs, ρ on the text development sets ranges by up to 0.17, accuracy by up to 3 points (8 on
+DailyDialog) and Score MAE by up to 0.06.
 
 Single differences of that size between heads should not be read as real (`results/general_v5c_e4b.md`).
 
@@ -388,9 +393,10 @@ calibration photos, it is 0.046 after task calibration, down from 0.439 raw (tab
   model's. On HelpSteer2 its calibration error (0.123) is slightly above the task-specific fine-tune's (0.105). Both
   are criteria it fails. Task calibration on your own items may help here too, but it has not been tested on these two
   cases.
-- **Training noise.** Two training runs of the same recipe that differ only in their random seed differ on text
-  development sets about as much as two different training mixes do: by 0.06 in Score MAE, 2–3 points of accuracy, and
-  up to 0.17 in ρ (`results/general_v5c_e4b.md`, the second-seed section). Small differences between this head and
+- **Training noise.** Three training runs of the same recipe that differ only in their random seed differ on text
+  development sets about as much as two different training mixes do: by up to 0.06 in Score MAE, up to 3 points of
+  accuracy (8 on one benchmark, DailyDialog), and up to 0.17 in ρ (`results/general_v5c_e4b.md`, the seeds
+  section). Small differences between this head and
   others are not reliable.
 - **Calibration on a new task.** Confidence is well calibrated on the tasks the head was trained on. On a new task it
   is usually underconfident zero-shot, and on some (the suite's 60-intent task in languages it was not trained on)

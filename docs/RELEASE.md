@@ -161,15 +161,18 @@ repository (`decisive-lm-data`), tagged `vX.Y` like the model, or links to where
 - **Linked, not re-hosted:** every public seed and benchmark dataset. `configs/datasets.yaml` pins each file's source
   (Hugging Face revision or commit URL), `scripts/fetch_dataset.py` downloads it with a sha256 manifest, and
   `scripts/convert_dataset.py` rebuilds our rows, so anyone can reproduce the inputs exactly.
-- **Published:**
-  - the teacher-written rows (states and question sets), with the teacher's calibrated probabilities for every
-    question and the calibration that produced them;
+- **Published, under CC BY 4.0:**
+  - the teacher-written rows, with the teacher's calibrated probabilities for every question and the calibration that
+    produced them. A row whose state the teacher wrote is published in full. A row whose state is a public dataset's
+    item (fan-out) is published without that state, which is rebuilt from its source by id. A fan-out row whose
+    questions quote its item (a string of 12 or more characters, or a run of six words) is not published: 1,442 of
+    14,894 in 0.1, listed by id;
   - the release mix manifest: source row ids, sources, licences, row counts and sha256 (criterion 6), from which the
     human-labelled rows are rebuilt from their sources;
   - per-item predictions of the released head, P0 and the teacher on the public benchmarks and the frozen suite.
 - **Before publishing**, checked and recorded on the dataset card:
-  - every published row is R tier, and rows written about a seed's state (fan-out) keep that seed's licence and are
-    credited (CC BY 4.0 needs attribution);
+  - every published row is R tier, and the source datasets of fan-out rows and predictions are credited (CC BY
+    needs attribution);
   - the teacher's licence allows its outputs to be published;
   - no restricted-tier or private data (private image sets, X-tier datasets, the owner's coding study until the owner
     releases it), no holdout row, no Jev/TypeSafe output;
@@ -409,3 +412,9 @@ repository (`decisive-lm-data`), tagged `vX.Y` like the model, or links to where
   of 0.01 and 0.002. On Wikipedia toxicity it made the E4B head's Brier worse. With 100 rows, the choice between forms
   follows noise. Criterion 2's per-task step stays as written above, and the two v5c heads' Brier failures stand as
   stated.
+- 2026-11-08: **two decisions for 0.1** (the owner's):
+  - The 26B A4B head is released before its criterion 8 is measured. Criterion 8 is reported, not gated, for 0.x. The
+    run needs a GPU with about 72 GiB free for two days, and none was free on 7–8 November. Its card says "not yet
+    measured", and the result is reported in a later 0.x release.
+  - Everything published in `decisive-lm-data` is CC BY 4.0 (Data, above). Fan-out rows are published without their
+    public-dataset states, which are rebuilt from the sources, so no third-party text is re-hosted.

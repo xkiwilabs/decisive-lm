@@ -232,8 +232,8 @@ sample of your task and compare their accuracy and review thresholds (sections 7
   agreement than P0's on the hate-speech survey and HelpSteer3, and a Brier score (a calibration measure, lower is
   better, section 11.2) on the hate-speech Scores that calibration makes worse by 0.0004. It also rates edited headlines
   as funnier than people do (Humicroedit, humour ratings of edited news headlines, chapter 14).
-- **The 26B A4B head was trained once** (seed 0). Two E4B runs that differ only in their seed differ by up to 0.17 in
-  the correlation of confidence with rater agreement on the development sets of section 14.4, so small differences
-  between the heads are not reliable.
+- **The 26B A4B head was trained once** (seed 0). Three E4B runs that differ only in their seed differ by up to 0.17 in
+  the correlation of confidence with rater agreement on the development sets of section 14.4, and by up to 3 points of
+  accuracy (8 on DailyDialog, a benchmark of section 14.3), so small differences between the heads are not reliable.
 
 Next: [8. Data format](08-data-format.md)

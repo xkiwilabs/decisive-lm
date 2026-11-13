@@ -58,32 +58,34 @@ P0+task and v3d+task are the zero-shot starting points from `results/media_v1_ze
 | MultiNLI relation | (acc 0.772) | (acc 0.810) | +0.261 | +0.340 | +0.375 | +0.323 |
 | MultiNLI support | 0.311 | 0.333 | +0.169 | +0.228 | +0.299 | +0.200 |
 
-## Seed 1: how much of this is training noise
+## Seeds 1 and 2: how much of this is training noise
 
 A second E4B v5c run (`general_v5c_e4b_r8_seed1`) used the same mix and recipe, with only the seed changed. It stopped early at step 10,500; the bundle selected by validation calibration loss is from step 9,000. Seed 0 stopped at 14,000, selected at 12,500.
 
+A third run (`general_v5c_e4b_r8_seed2`, same mix and recipe, only the seed changed) stopped early at step 12,500; the bundle selected by validation calibration loss is from step 11,000. All three runs are scored the same way: `scripts/eval_dataset.py` on gold_test with seed 0 as the reference, so each Δ is paired with seed 0 on the same items. Coding study: not scored: the coding study's labels are being re-imported.
+
 The bootstrap CIs elsewhere in this file cover the sampling of test items only. The gap between two seeds adds the randomness of training itself.
 
-| Set | Measure | P0 | v3d | v5a | v5c seed 0 | v5c seed 1 | Δ s1 − s0 [95% CI] |
-|---|---|---|---|---|---|---|---|
-| VizWiz answerable | AUROC | 0.788 | 0.828* | 0.922 | 0.933 | 0.930 | −0.003 [−0.006, +0.001] |
-| VizWiz answer, 4 options | accuracy | 0.432 | 0.434* | 0.699 | 0.711 | 0.689 | −0.022 [−0.041, −0.005] |
-| VizWiz answer, 4 options | ρ(top p, agreement) | +0.292 | +0.332* | +0.599 | +0.633 | +0.619 | |
-| wiki_toxicity | MAE | 0.355 | 0.482 | 0.487 | 0.462 | 0.456 | −0.005 [−0.010, −0.000] |
-| wiki_toxicity | ρ(top p, agreement) | +0.057 | −0.125 | −0.114 | −0.010 | **−0.175** | |
-| humicroedit | MAE | 0.733 | 0.566 | 0.486 | 0.567 | 0.507 | −0.059 [−0.065, −0.053] |
-| humicroedit | ρ(top p, agreement) | −0.115 | +0.124 | +0.201 | +0.113 | +0.196 | |
-| csc_sarcasm | MAE | 1.065 | 1.131 | 0.999 | 1.070 | 1.130 | +0.061 [+0.047, +0.073] |
-| MultiNLI relation | accuracy | 0.772 | 0.818 | 0.846 | 0.810 | 0.825 | +0.015 [+0.009, +0.022] |
-| MultiNLI support | MAE | 0.311 | 0.305 | 0.269 | 0.333 | 0.298 | −0.035 [−0.039, −0.032] |
-| AG News | accuracy | 0.810 | 0.836 | 0.842 | 0.850 | 0.824 | −0.026 [−0.042, −0.012] |
-| Banking77 | accuracy | 0.720 | 0.830 | 0.830 | 0.856 | 0.840 | −0.016 [−0.034, +0.000] |
-| DailyDialog | accuracy | **0.680** | 0.614 | 0.601 | 0.645 | 0.655 | +0.009 [+0.004, +0.015] |
-| emotion (tweets) | accuracy | 0.581 | 0.609 | 0.570 | 0.605 | 0.610 | +0.005 [−0.004, +0.014] |
-| TweetTopic | accuracy | 0.779 | 0.750 | 0.788 | 0.757 | 0.781 | +0.024 [+0.011, +0.036] |
-| DailyDialog | ECE | 0.225 | 0.125 | 0.137 | 0.137 | 0.287 | |
-| emotion (tweets) | ECE | 0.319 | 0.105 | 0.067 | 0.093 | 0.241 | |
-| TweetTopic | ECE | 0.114 | 0.148 | 0.197 | 0.151 | 0.305 | |
+| Set | Measure | P0 | v3d | v5a | v5c seed 0 | v5c seed 1 | Δ s1 − s0 [95% CI] | v5c seed 2 | Δ s2 − s0 [95% CI] |
+|---|---|---|---|---|---|---|---|---|---|
+| VizWiz answerable | AUROC | 0.788 | 0.828* | 0.922 | 0.933 | 0.930 | −0.003 [−0.006, +0.001] | 0.930 | −0.003 [−0.006, +0.000] |
+| VizWiz answer, 4 options | accuracy | 0.432 | 0.434* | 0.699 | 0.711 | 0.689 | −0.022 [−0.041, −0.005] | 0.719 | +0.008 [−0.007, +0.023] |
+| VizWiz answer, 4 options | ρ(top p, agreement) | +0.292 | +0.332* | +0.599 | +0.633 | +0.619 | | +0.626 | |
+| wiki_toxicity | MAE | 0.355 | 0.482 | 0.487 | 0.462 | 0.456 | −0.005 [−0.010, −0.000] | 0.495 | +0.033 [+0.028, +0.038] |
+| wiki_toxicity | ρ(top p, agreement) | +0.057 | −0.125 | −0.114 | −0.010 | **−0.175** | | −0.142 | |
+| humicroedit | MAE | 0.733 | 0.566 | 0.486 | 0.567 | 0.507 | −0.059 [−0.065, −0.053] | 0.512 | −0.055 [−0.061, −0.047] |
+| humicroedit | ρ(top p, agreement) | −0.115 | +0.124 | +0.201 | +0.113 | +0.196 | | +0.150 | |
+| csc_sarcasm | MAE | 1.065 | 1.131 | 0.999 | 1.070 | 1.130 | +0.061 [+0.047, +0.073] | 1.127 | +0.057 [+0.045, +0.069] |
+| MultiNLI relation | accuracy | 0.772 | 0.818 | 0.846 | 0.810 | 0.825 | +0.015 [+0.009, +0.022] | 0.811 | +0.001 [−0.004, +0.008] |
+| MultiNLI support | MAE | 0.311 | 0.305 | 0.269 | 0.333 | 0.298 | −0.035 [−0.039, −0.032] | 0.345 | +0.012 [+0.009, +0.015] |
+| AG News | accuracy | 0.810 | 0.836 | 0.842 | 0.850 | 0.824 | −0.026 [−0.042, −0.012] | 0.842 | −0.008 [−0.018, +0.002] |
+| Banking77 | accuracy | 0.720 | 0.830 | 0.830 | 0.856 | 0.840 | −0.016 [−0.034, +0.000] | 0.852 | −0.004 [−0.022, +0.014] |
+| DailyDialog | accuracy | **0.680** | 0.614 | 0.601 | 0.645 | 0.655 | +0.009 [+0.004, +0.015] | **0.571** | −0.074 [−0.081, −0.068] |
+| emotion (tweets) | accuracy | 0.581 | 0.609 | 0.570 | 0.605 | 0.610 | +0.005 [−0.004, +0.014] | 0.604 | −0.001 [−0.011, +0.008] |
+| TweetTopic | accuracy | 0.779 | 0.750 | 0.788 | 0.757 | 0.781 | +0.024 [+0.011, +0.036] | 0.780 | +0.023 [+0.012, +0.034] |
+| DailyDialog | ECE | 0.225 | 0.125 | 0.137 | 0.137 | 0.287 | | 0.197 | |
+| emotion (tweets) | ECE | 0.319 | 0.105 | 0.067 | 0.093 | 0.241 | | 0.199 | |
+| TweetTopic | ECE | 0.114 | 0.148 | 0.197 | 0.151 | 0.305 | | 0.313 | |
 
 \*v3d with the per-task step fitted on VizWiz's gold_calib rows (it never trained on photos); P0's VizWiz column also has the step.
 
@@ -96,6 +98,15 @@ The bootstrap CIs elsewhere in this file cover the sampling of test items only. 
 
 The photo results are stable across seeds.
 
+**Spread across the three runs.** Across three seeds, ρ on the text development sets ranges by up to 0.165 (wiki_toxicity: −0.175 to −0.010; humicroedit 0.083, sarcasm 0.020, MultiNLI support 0.062), accuracy by up to 8.4 points (DailyDialog: 57.1% to 65.5%; excluding it, up to 3.0 points on the VizWiz four-option answer, then AG News 2.6 and TweetTopic 2.4), and Score MAE by up to 0.060 (humicroedit and sarcasm; wiki_toxicity 0.039, MultiNLI support 0.047). These are the largest gaps between any two of the three seeds, taken from the table above.
+
+**Seed 2 against the earlier two.**
+- Seed 2 sits with seed 1 on humicroedit (MAE 0.512 against 0.507, seed 0 0.567) and on tweet topic (+2.3 points over seed 0), so seed 0 was the unusual run on those two.
+- Seed 2 sits with seed 1 on wiki_toxicity ρ (−0.142 against −0.175), so two of three seeds have a ρ below v3d's (−0.125) and below P0's (+0.057). Its MAE (0.495) is the worst of the three runs.
+- On DailyDialog seed 2 is 7.4 points below seed 0 and 8.4 below seed 1 (and 4.3 below v3d's 61.4%), with ECE 0.197 against 0.137 for seed 0.
+- On MultiNLI support seed 2 (MAE 0.345) is worse than seed 0 and seed 1; on the relation accuracy it matches seed 0.
+- Raw calibration again varies: tweet emotion ECE is 0.09, 0.24 and 0.20; TweetTopic 0.15, 0.31 and 0.31.
+
 ## What it says
 
 - **Photos are at least as good as v5a without the audio.** Answerability is slightly better: AUROC 0.933 against 0.922, a difference of +0.010 [+0.005, +0.015].
@@ -106,6 +117,8 @@ The photo results are stable across seeds.
   - This fits the guess that v5a's emotion losses came from Emozionalmente, the speech-emotion set.
   - It does not prove it, because v5c also lacks v4a's two text sources.
 - **Correction after seed 1:** the "improved" in the next point is seed noise. Seed 1's ρ on wiki_toxicity is −0.175, worse than v3d's. Read every text difference between single runs in this file against the seed-to-seed gaps above. Also, P0 beats every head on DailyDialog (68% against 65%).
+- **Correction after seed 2:** the "best of the three heads" and "gone" in the emotion point above hold for seeds 0 and 1 only. Seed 2's DailyDialog accuracy is 57.1%, below v3d (61.4%) and v5a (60.1%), and P0 (68.0%). Tweet emotion is still at v3d's level in all three seeds (60.5%, 61.0%, 60.4% against v3d 60.9%). The DailyDialog gain over v3d and v5a therefore cannot be told apart from seed noise, and the guess about Emozionalmente is not supported by it.
+- **Correction after seed 2:** the "improved" in the next point is not supported on MAE either. Seed 2's wiki_toxicity MAE is 0.495, worse than v3d's (0.482) and v5a's (0.487); the three seeds are 0.462, 0.456 and 0.495. Seed 2's ρ is −0.142, so two of three seeds are below v3d's ρ (−0.125).
 - **wiki_toxicity improved but still fails against P0.** It is the dev proxy for v3d's suite failure, MHS Score review readiness.
   - Its MAE (0.462) is better than v3d's and v5a's, but well behind P0's 0.355.
   - Its ρ is about zero (−0.010), where P0 is +0.057.
@@ -114,3 +127,5 @@ The photo results are stable across seeds.
   - MultiNLI's support Score is slightly worse than v3d's (MAE +0.028) and than P0's (+0.022). Its ρ is still above P0's (0.20 against 0.17).
 - **Elsewhere, text held or rose.** AG News +1.4 points and Banking77 +2.6 over v3d; the rest are within noise.
   - Raw calibration is worse on two benchmarks: financial topics ECE 0.265 (v3d 0.188) and Banking77 0.292 (v3d 0.251).
+- **Correction after seed 2:** "Humour, sarcasm and the MultiNLI levels sit at or below v3d" holds for sarcasm (MAE 1.070, 1.130, 1.127 against v3d 1.131; only seed 0 is better, by 0.061) but not for humour, where seeds 1 and 2 (MAE 0.507, 0.512) beat v3d's 0.566 and sit within 0.03 of v5a's 0.486; seed 0 was the low run. MultiNLI support is 0.333, 0.298 and 0.345 against v3d's 0.305, so it is better than v3d in one seed of three.
+- **Correction after seed 2:** "AG News +1.4 points and Banking77 +2.6 over v3d" were seed 0's gaps. AG News is 85.0%, 82.4% and 84.2% against v3d's 83.6%; Banking77 is 85.6%, 84.0% and 85.2% against 83.0%. Only Banking77 is above v3d in all three seeds, by 1.0 to 2.6 points, and it is trained on. Financial topics ECE: 0.265, 0.258, 0.234 (v3d 0.188); Banking77 ECE: 0.292, 0.322, 0.243 (v3d 0.251).

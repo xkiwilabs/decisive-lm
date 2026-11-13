@@ -14,9 +14,6 @@ tags:
   - gemma4
 ---
 
-<!-- DRAFT 2026-11-05: the 26B A4B head of 0.1 (owner, 2026-11-05, RELEASE.md). Criterion 8 is run on the weekend of
-7–8 November and filled in then; criteria 6 and 7 are rechecked on the release snapshot in the dry run. -->
-
 # DecisiveLM 26B A4B general head 0.1 (preview)
 
 A general-purpose decision head for Google's Gemma 4 26B A4B, a mixture-of-experts model that uses about 4B of its 26B
@@ -171,7 +168,7 @@ memory, in GiB (guide §4.10). One server holds heads of one backbone only.
 | | Running the head | Fine-tuning it on your task |
 |---|---|---|
 | Hardware | Linux with an NVIDIA GPU (CUDA), or a Mac with Apple silicon (MPS) and 96 GB or more of unified memory. On an M5 Max with 128 GB it held 56.0 GiB after loading and peaked at 58.6 GiB over 20 requests of up to 1,599 tokens, about 1.9 s per request (median, one at a time), and its answers matched the CUDA predictions within 0.002 with no answer changed (60 questions) | the same; fine-tune memory on a Mac not measured |
-| Memory | a GPU with about 72 GiB free. Through the server, 55.8 GiB after loading and 67.0 GiB at the peak, on requests at its default limits (a state is cut at 8,192 tokens, and a whole request may be up to 12,288), with or without a photo | not yet measured for a user fine-tune (measured with criterion 8, below). Training this head on the general mix peaked at 66.0 GiB with micro-batches of 4,096 tokens and gradient checkpointing |
+| Memory | a GPU with about 72 GiB free. Through the server, 55.8 GiB after loading and 67.0 GiB at the peak, on requests at its default limits (a state is cut at 8,192 tokens, and a whole request may be up to 12,288), with or without a photo | not yet measured for a user fine-tune (criterion 8, below). Training this head on the general mix peaked at 66.0 GiB with micro-batches of 4,096 tokens and gradient checkpointing |
 | Time | 0.47 s for a request of about 1,200 tokens with 20 options (four questions of five options each), batch 1, on one RTX PRO 6000 Blackwell Max-Q; 5.7–5.8 s for requests of about 12,000 tokens. The prompted 26B A4B, which reads each question once per option order, took 577–1,109 ms for the same request on vLLM (`results/p0_latency.md`) | 1.38 s per training row on the general mix |
 | Disk | about 49 GB for Gemma 4 26B A4B and about 1 GB for the Python environment | the same, plus your data |
 
@@ -245,7 +242,7 @@ Release criteria (pass or fail, with paired bootstrap confidence intervals again
 | 5. Contract: conformance, independence and order | passes: conformance 100% on every suite item (41,642 requests). On 200 requests from each of two development sets, reversing options, packing another request first or adding a question changed no answer and moved no probability by more than 0.011, and an identical request reproduced exactly. Across the suite, answering each request alone rather than packed changed 36 of about 95,000 answers, 34 of them near-ties, by at most 0.056 (Limitations) |
 | 6. Provenance | passes: the same release-tier mix and manifest as the E4B head; Gemma 4 teacher and backbone; clean-room checks pass |
 | 7. Snapshot audit | passes: the same repository snapshot as the E4B head |
-| 8. A better starting point for fine-tunes (1.0; reported for 0.x) | not yet measured; scheduled for 7–8 November 2026, with the E4B head's recipe (coding study and MultiNLI, 100 and 300 items, three seeds) |
+| 8. A better starting point for fine-tunes (1.0; reported for 0.x) | not yet measured for 0.1. It needs a GPU with about 72 GiB free for two days, and is planned for a later 0.x release, with the E4B head's recipe (coding study and MultiNLI, 100 and 300 items, three seeds) |
 
 This head is released as a preview although it fails five checks. That decision was made after its suite result was
 seen, and the criteria's change log records it
@@ -326,8 +323,8 @@ P0 is calibrated the same way as the head.
 - **Humour.** On Humicroedit its ratings are too high and its confidence is no guide to agreement. Neither task
   calibration nor a fine-tune has been tested on humour for this head. Both are the routes to try, on your own
   ratings.
-- **One training run.** This head was trained once. Two E4B runs that differ only in their seed differ on the text
-  development sets by up to 0.17 in ρ and 2–3 points of accuracy ([the E4B head's
+- **One training run.** This head was trained once. Three E4B runs that differ only in their seed differ on the text
+  development sets by up to 0.17 in ρ and up to 3 points of accuracy, 8 on one benchmark ([the E4B head's
   card](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/model-card.md#limitations-and-biases)), so small
   differences between this head and others are not reliable. A second 26B run is planned when more GPUs are available.
 - **Near-tie answers depend on packing.** The mixture-of-experts backbone picks 8 of its 128 experts per token. Even
@@ -352,8 +349,8 @@ The same as for the E4B head ([its
 card](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/model-card.md#roadmap)): 0.2 in mid to late November
 2026 adds two-sided human ratings and the two same-task sources held back until the first release
 (HelpSteer2-Preference and the training portion of Measuring Hate Speech), and 1.0 by the end of November 2026 adds
-images and audio with multi-rater labels and the stricter gates. Criterion 8 for this head is measured on 7–8 November
-2026.
+images and audio with multi-rater labels and the stricter gates. Criterion 8 for this head is measured in a later 0.x
+release.
 
 ## Licence
 

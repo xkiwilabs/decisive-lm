@@ -52,8 +52,9 @@ Human-labelled datasets the general head trains on (their `train` splits only). 
 LEDGAR's licence is as distributed in LexGLUE. The provisions themselves are public SEC EDGAR filings.
 
 **Generated rows.** Question sets and states written by Gemma 4 26B A4B (`scripts/synth_generate.py`, chapter 13) are
-registered as `synth_gemma4`. They are Apache-2.0 and R tier, because Gemma 4 places no terms on its outputs. Fan-out
-rows, written about a real state from a seed, keep that seed's source, licence and tier.
+registered as `synth_gemma4`. They are R tier, because Gemma 4 places no terms on its outputs, and each release
+publishes them under CC BY 4.0 (14.7). Fan-out rows, written about a real state from a seed, keep that seed's source,
+licence and tier, and are published without that state, or not at all if their questions quote it (14.7).
 
 ## 14.3 Development benchmarks
 
@@ -277,16 +278,20 @@ Data is never stored in the code repository. Each release publishes its data on 
 
 - **Linked, not re-hosted:** every public seed, benchmark and suite dataset. The pinned sources in
   `configs/datasets.yaml`, `scripts/fetch_dataset.py` and `scripts/convert_dataset.py` rebuild the same rows.
-- **Published:**
-  - the teacher-written rows (states and question sets), with the teacher's calibrated probabilities for every
-    question and the calibration that produced them;
+- **Published, under CC BY 4.0:**
+  - the teacher-written rows, with the teacher's calibrated probabilities for every question and the calibration that
+    produced them. A row whose state the teacher wrote is published in full. A fan-out row, whose state is an item of a
+    public dataset, is published without that state, which is rebuilt from its source by its id. A fan-out row whose
+    questions quote its item (a string of 12 or more characters, or a run of six words) is not published: 1,442 of
+    14,894 in 0.1, listed by id in the dataset's `teacher_rows/withheld_fanout_ids.txt`;
   - the release mix manifest: source row ids, sources, licences, row counts and SHA-256, from which the
     human-labelled rows are rebuilt from their sources;
   - per-item predictions of the released head, P0 and the teacher on the public benchmarks and the frozen suite.
 
 Before publishing, each release checks and records on the dataset card that:
 
-- every published row is R tier;
+- every published row is R tier, and the source datasets of fan-out rows and of the predictions are credited (CC BY
+  requires credit, 14.8);
 - the teacher's licence allows its outputs to be published;
 - no restricted-tier or private data, holdout row, or output of a third-party commercial decision service (the
   clean-room rule, section 16.1) is included.
@@ -295,10 +300,11 @@ Before publishing, each release checks and records on the dataset card that:
 
 Most datasets here are CC BY, which requires credit. When you publish anything derived from them (fan-out rows, model
 weights trained on them, results tables), cite the dataset authors listed above, link the source and the licence, and
-say what was changed. Fan-out rows written about a seed's state keep that seed's licence and are credited to it in the
-published dataset card. CLINC150 is CC BY 3.0 and Civil Comments is CC0, which asks for no attribution, though citing it
-is good practice. MultiNLI's texts come from the Open American National Corpus, which places no restrictions on use.
-Cite Williams, Nangia and Bowman (2018) and link the corpus page.
+say what was changed. The project's own published data (14.7) is CC BY 4.0. It re-hosts no third-party text: its fan-out
+rows leave out the public datasets' states, and rows whose questions quote a state are withheld. Its dataset card
+credits the datasets those states and the predictions come from. CLINC150 is CC BY 3.0 and Civil Comments is CC0, which
+asks for no attribution, though citing it is good practice. MultiNLI's texts come from the Open American National
+Corpus, which places no restrictions on use. Cite Williams, Nangia and Bowman (2018) and link the corpus page.
 
 THINGSplus ratings are CC BY 4.0: cite Hebart et al. (2019, PLoS ONE) and Stoinski, Perkuhn and Hebart (2024,
 Behavior Research Methods). CREMA-D is under the ODbL: cite Cao et al. (2014, IEEE Transactions on Affective

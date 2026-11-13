@@ -258,8 +258,8 @@ before your labels can guide them.
 with the same learning rates. The fine-tune computes in float32 (section 9.5) and needs a GPU with about 72 GiB free for
 the head itself. Memory for a fine-tune has not been measured (training the 26B A4B head on its full mix peaked at 66.0
 GiB with 4,096-token micro-batches). The comparison below was run with the E4B head only. Whether the 26B A4B head is a
-better starting point than the base model (release criterion 8) has not yet been measured. It is scheduled for 7 to 8
-November 2026, and until then use the E4B head or the base model if you need a result you can rely on.
+better starting point than the base model (release criterion 8) has not yet been measured, and will be reported in a
+later 0.x release. Until then, use the E4B head or the base model if you need a result you can rely on.
 
 **How much it helps (E4B head).** We compared fine-tunes from the general head with fine-tunes from the base model
 (release criterion 8, [chapter 15](15-release-criteria.md)). Each was trained on 100 and on 300 labelled items of two

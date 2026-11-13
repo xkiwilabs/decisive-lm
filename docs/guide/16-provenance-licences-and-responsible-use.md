@@ -68,7 +68,7 @@ other models wrote. It is used as data, and its models are never run.
 | DecisiveLM code | Apache-2.0 (`LICENSE`) |
 | Published adapter weights (the two general heads) | Apache-2.0 |
 | Gemma 4 weights | Released by Google under Apache-2.0, as recorded in `configs/model.yaml`. Check the model card of the revision you use |
-| Teacher-written rows | Apache-2.0, because Gemma 4 places no terms on its outputs |
+| Teacher-written rows | CC BY 4.0, as published in `decisive-lm-data` (14.7). Gemma 4 places no terms on its outputs |
 | Public datasets | Each its own (chapter 14): CC BY 4.0, CC BY 3.0, CC0 1.0 and Apache-2.0 for training data; evaluation-only sets as listed |
 
 **Licence tiers** decide where a row may be used (14.1):

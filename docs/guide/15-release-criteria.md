@@ -187,10 +187,10 @@ stated on its model card ([docs/RELEASE.md](../RELEASE.md), change log 2026-11-0
 accuracy on MASSIVE (criterion 3: 0.680 against 0.731), errors caught in a 20% review and the lowest within-category ρ
 on Measuring Hate Speech's Scores, the lowest within-category ρ on HelpSteer3 (criterion 1), and Brier after the
 per-task step on Measuring Hate Speech's Scores (criterion 2: 0.6403 against 0.6399 before, with the whole interval of
-the difference above zero). It passes criteria 4 to 7. Its criterion 8 is scheduled for 7 to 8 November 2026. It was
-released as a preview, with the failures stated on its model card, by a decision made after its result was seen, and the
-change log in [docs/RELEASE.md](../RELEASE.md) records it. It is better than the E4B head on the main measure of every
-suite task ([model card of the 26B A4B head](../model-card-26b.md)).
+the difference above zero). It passes criteria 4 to 7. Its criterion 8 has not yet been measured and will be reported in
+a later 0.x release. It was released as a preview, with the failures stated on its model card, by a decision made after
+its result was seen, and the change log in [docs/RELEASE.md](../RELEASE.md) records it. It is better than the E4B head
+on the main measure of every suite task ([model card of the 26B A4B head](../model-card-26b.md)).
 
 ## 15.4 Scoring a candidate once
 
