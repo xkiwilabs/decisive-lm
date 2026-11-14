@@ -88,14 +88,14 @@ examples of it).
 | Use case | For example | What was measured |
 |---|---|---|
 | Routing and intent detection | a Choice "Which team should handle this message?" over billing, technical and sales, or over a list of up to 255 intents | Banking77, 77 banking intents (trained on): 90.9% right, against 90.2% for a fine-tune on Banking77 alone. CLINC150, 150 intents (trained on): 94.3% against 92.0%. Intents in ten languages it was not trained on (MASSIVE): 67.2% against P0's 65.8% |
-| Coding open-ended answers, as a first coder | a Choice of eight codes for a free-text survey answer, with the least confident answers sent to a human coder | a coding study (792 answers, four human coders), zero-shot: agreement with the coders κ 0.676, against 0.739 between the coders themselves and 0.649 for P0. Its least confident 20% held 60.6% of its errors, against 41.9% for P0's least confident 20%. Fine-tuned on 100 coded answers: 91.9% right, against 86.6% for the same fine-tune started from the base model |
+| Coding open-ended answers, as a first coder | a Choice of eight codes for a free-text survey answer, with the least confident answers sent to a human coder | a coding study (792 answers, four human coders), zero-shot: agreement with the coders κ 0.675, against 0.739 between the coders themselves and 0.649 for P0. Its least confident 20% held 60.8% of its errors, against 42.2% for P0's least confident 20%. Fine-tuned on 100 coded answers: 91.9% right, against 86.6% for the same fine-tune started from the base model |
 | Moderation and yes/no screening | a Noul "The comment contains a personal attack" | Civil Comments (trained on): mean AUROC 0.979, against 0.982 for a fine-tune on it alone. The hate-speech survey's yes/no question (not trained on): AUROC 0.852, against P0's 0.855 |
 | Contract and document review | a Noul "This clause caps the supplier's liability", or a Choice over 100 provision types | CUAD, ten clause types it was not trained on: AUROC 0.947, against P0's 0.945. LEDGAR, 100 provision types (trained on): 83.6% right, against 82.1% for a fine-tune on it alone |
 | Rating against a rubric | a Score "How helpful is this reply?" on five levels | HelpSteer2 (trained on): mean MAE 0.466, against 0.468 for a fine-tune on it alone. HelpSteer3, comparing two chatbot replies (not trained on): MAE 1.023, against P0's 1.292. On HelpSteer3 neither model's confidence says which answers to check, so review a random sample there |
 | Topic, sentiment and emotion tagging | a Choice over topics, or a Choice of emotion | seven public benchmarks, zero-shot except Banking77: more accurate than P0 on three, level on one, less accurate on three. GoEmotions (trained on): 74.3% right, against 76.0% for a fine-tune on it alone |
 | Whether one text supports another | a Choice "Does the second sentence follow from the first?" over follows, contradicts and neither | MultiNLI, five annotators per pair (not trained on): ρ between its confidence and annotator agreement 0.323, against P0's 0.261. Its least confident 20% held 47.2% of its errors, against 39.2% for P0 |
 | Questions about photos | a Noul "The photo shows enough to answer the question", or a Choice between a few answers | VizWiz-VQA, photos taken by blind and low-vision people (trained on; held-out photos): AUROC 0.933 against P0's 0.788, and 71.1% right on a four-option answer against 43.2%. CIFAR-10H, objects in small photos (not trained on): 90.9% right against P0's 87.5%, but calibrate first (its raw ECE is 0.44) |
-| A starting point for your own fine-tune | 100 to 300 of your own labelled items (guide chapter 9) | fine-tunes on 100 items started from this head beat the same fine-tunes started from the base model: 91.9% against 86.6% on the coding study, and 86.1% against 84.3% on MultiNLI, with more of their errors in their least confident 20% |
+| A starting point for your own fine-tune | 100 to 300 of your own labelled items (guide chapter 9) | fine-tunes on 100 items started from this head beat the same fine-tunes started from the base model: 91.9% against 87.7% on the coding study, and 86.1% against 84.3% on MultiNLI, and their confidence tracks rater agreement more closely |
 
 It is fast: about 0.10 s for a request with four questions of five options each, against 0.6–0.8 s for P0
 (Hardware, below).
@@ -283,7 +283,7 @@ Release criteria (pass or fail, with paired bootstrap confidence intervals again
 | 5. Contract: conformance, independence and order | passes: conformance 100% on every suite item (41,642 requests). Reversing options, packing another request first or adding a question moves no probability by more than 0.03 (bf16 rounding); an identical request reproduces exactly |
 | 6. Provenance | passes: release-tier mix with its manifest; Gemma 4 teacher and backbone; clean-room checks pass, which check that no answer from TypeSafe's Jev System One API, whose public request format DecisiveLM follows, has entered the data ([guide §16.1](https://github.com/xkiwilabs/decisive-lm/blob/main/docs/guide/16-provenance-licences-and-responsible-use.md)) |
 | 7. Snapshot audit | passes: allowlisted paths only, the test suite green, no secrets, private paths or private data |
-| 8. A better starting point for fine-tunes (1.0; reported for 0.x) | passes: fine-tunes on 100 or 300 items of the coding study and MultiNLI, started from this head, are never significantly worse than ones started from the base model. At 100 items they are better on accuracy, ρ and errors caught in review on both tasks (coding: 91.9% against 86.6%) |
+| 8. A better starting point for fine-tunes (1.0; reported for 0.x) | passes: fine-tunes on 100 or 300 items of the coding study and MultiNLI, started from this head, are never significantly worse than ones started from the base model. At 100 items they are better on accuracy and ρ on both tasks (coding: 91.9% against 87.7%, ρ 0.584 against 0.479) and on errors caught in review on MultiNLI |
 
 This head is released as a preview although it fails three checks. That decision was made after its suite result
 was seen, and the criteria's change log records it
@@ -312,7 +312,7 @@ P0 is calibrated the same way as the head.
 | Set | What it shows | This head | P0 |
 |---|---|---|---|
 | VizWiz-VQA: photos by blind and low-vision people, 10 answerers each (trained on; scored on held-out photos) | photo questions | can the photo answer the question: AUROC 0.933; answer, 4 options: 71.1% right, ρ 0.633 | AUROC 0.788; 43.2%, ρ 0.292 (with task calibration) |
-| Coding study: 792 free-text answers, 8 codes, 4 human coders (Alhasan, Diaz Monfort & Richardson, under review; data not distributed) | a rule-heavy coding task, zero-shot | κ with coders 0.676 (coders with each other 0.739); errors caught in a 20% review 60.6%; ρ 0.206; ECE 0.396 zero-shot | κ 0.649; errors caught 41.9%; ρ 0.385 |
+| Coding study: 792 free-text answers, 8 codes, 4 human coders (Alhasan, Diaz Monfort & Richardson, under review; data not distributed) | a rule-heavy coding task, zero-shot | κ with coders 0.675 (coders with each other 0.739); errors caught in a 20% review 60.8%; ρ 0.208; ECE 0.398 zero-shot | κ 0.649; errors caught 42.2%; ρ 0.386 |
 | Seven public benchmarks (AG News, Banking77, DailyDialog, emotion, financial topics, SST-2, tweet topics) | classification, zero-shot except Banking77, whose training portion is in the mix | more accurate than P0 on 3, level on 1, less on 3; ECE ≤ 0.09 after 100 rows (0.06–0.28 zero-shot) | ECE ≤ 0.08 after 100 rows |
 | MultiNLI (5 annotators per pair; held out) | review readiness on a task outside the mix | ρ 0.323 (Choice), 0.200 (Score); errors caught 47.2% (Choice) | ρ 0.261, 0.169; errors caught 39.2% |
 | Wikipedia toxicity (about 10 raters per comment; held out) | review readiness on an unseen two-sided social scale | ρ −0.010; tie AUROC 0.531; MAE 0.462 | ρ +0.057; tie AUROC 0.539; MAE 0.355 |
@@ -326,8 +326,8 @@ v5a mixes, and on the sarcasm corpus it moves by up to 0.06. The other two runs 
   against 64.5%), and seed 1 is 1 point more accurate.
 - Their photo results are close to this head's: answerable AUROC 0.930 and 0.930 against 0.933, and four-option
   accuracy 68.9% and 71.9% against 71.1%.
-- On the coding study, seed 1's ρ is 0.373 against this head's 0.206, and the errors it catches in review are 49.2%
-  against 60.6%. Seed 2 has not been scored there.
+- On the coding study, seed 1's ρ is 0.372 against this head's 0.208, and the errors it catches in review are 48.3%
+  against 60.8%. Seed 2 has not been scored there.
 
 Across the three runs, ρ on the text development sets ranges by up to 0.17, accuracy by up to 3 points (8 on
 DailyDialog) and Score MAE by up to 0.06.

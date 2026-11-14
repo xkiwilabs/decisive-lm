@@ -8,23 +8,23 @@ Adapters fine-tuned on N labelled training items (scripts/train_p3.py --n-train;
 
 | Metric | base (per seed) | general (per seed) | base | general | Δ | 95% CI | |
 |---|---|---|---|---|---|---|---|
-| accuracy | 0.854, 0.872, 0.872 | 0.908, 0.932, 0.915 | 0.866 | 0.919 | +0.052 | [+0.036, +0.068] | better |
-| ρ(top p, agreement) | 0.440, 0.446, 0.533 | 0.571, 0.602, 0.557 | 0.473 | 0.577 | +0.104 | [+0.076, +0.133] | better |
-| tie AUROC | 0.732, 0.723, 0.777 | 0.740, 0.760, 0.751 | 0.744 | 0.750 | +0.006 | [-0.017, +0.028] | n.s. |
-| errors in review 20% | 0.705, 0.696, 0.598 | 0.697, 0.816, 0.738 | 0.666 | 0.750 | +0.084 | [+0.012, +0.167] | better |
-| ECE | 0.082, 0.079, 0.057 | 0.057, 0.068, 0.056 | 0.072 | 0.060 | -0.012 | [-0.027, +0.002] | n.s. |
-| soft NLL | 0.335, 0.340, 0.312 | 0.280, 0.247, 0.281 | 0.329 | 0.269 | -0.060 | [-0.072, -0.048] | better |
+| accuracy | 0.882, 0.884, 0.864 | 0.905, 0.930, 0.922 | 0.877 | 0.919 | +0.043 | [+0.029, +0.058] | better |
+| ρ(top p, agreement) | 0.536, 0.465, 0.438 | 0.580, 0.607, 0.565 | 0.479 | 0.584 | +0.105 | [+0.079, +0.130] | better |
+| tie AUROC | 0.763, 0.755, 0.763 | 0.755, 0.771, 0.763 | 0.760 | 0.763 | +0.003 | [-0.029, +0.031] | n.s. |
+| errors in review 20% | 0.647, 0.783, 0.684 | 0.632, 0.860, 0.696 | 0.705 | 0.730 | +0.025 | [-0.077, +0.093] | n.s. |
+| ECE | 0.060, 0.068, 0.060 | 0.052, 0.068, 0.062 | 0.062 | 0.061 | -0.002 | [-0.017, +0.011] | n.s. |
+| soft NLL | 0.311, 0.311, 0.360 | 0.289, 0.246, 0.281 | 0.327 | 0.272 | -0.055 | [-0.068, -0.043] | better |
 
 ### 300 training items (3 seeds)
 
 | Metric | base (per seed) | general (per seed) | base | general | Δ | 95% CI | |
 |---|---|---|---|---|---|---|---|
-| accuracy | 0.914, 0.936, 0.907 | 0.950, 0.940, 0.904 | 0.919 | 0.932 | +0.012 | [+0.001, +0.024] | better |
-| ρ(top p, agreement) | 0.592, 0.579, 0.555 | 0.665, 0.639, 0.563 | 0.575 | 0.622 | +0.047 | [+0.017, +0.076] | better |
-| tie AUROC | 0.813, 0.825, 0.779 | 0.839, 0.859, 0.726 | 0.806 | 0.808 | +0.002 | [-0.028, +0.038] | n.s. |
-| errors in review 20% | 0.645, 0.783, 0.582 | 0.889, 0.860, 0.696 | 0.670 | 0.815 | +0.145 | [+0.053, +0.225] | better |
-| ECE | 0.060, 0.051, 0.080 | 0.060, 0.051, 0.043 | 0.064 | 0.051 | -0.012 | [-0.022, -0.001] | better |
-| soft NLL | 0.277, 0.256, 0.297 | 0.225, 0.219, 0.286 | 0.277 | 0.243 | -0.033 | [-0.044, -0.024] | better |
+| accuracy | 0.935, 0.932, 0.866 | 0.943, 0.948, 0.950 | 0.911 | 0.947 | +0.036 | [+0.024, +0.049] | better |
+| ρ(top p, agreement) | 0.630, 0.554, 0.556 | 0.666, 0.647, 0.662 | 0.580 | 0.658 | +0.078 | [+0.053, +0.104] | better |
+| tie AUROC | 0.831, 0.812, 0.795 | 0.836, 0.860, 0.860 | 0.813 | 0.852 | +0.039 | [+0.015, +0.065] | better |
+| errors in review 20% | 0.851, 0.857, 0.688 | 0.829, 0.838, 0.833 | 0.799 | 0.833 | +0.035 | [-0.060, +0.137] | n.s. |
+| ECE | 0.058, 0.048, 0.058 | 0.053, 0.055, 0.051 | 0.055 | 0.053 | -0.002 | [-0.015, +0.008] | n.s. |
+| soft NLL | 0.239, 0.274, 0.296 | 0.226, 0.219, 0.223 | 0.270 | 0.223 | -0.047 | [-0.057, -0.038] | better |
 
 ## multinli (4,823 gold_test items, 3 options)
 
@@ -53,4 +53,4 @@ Adapters fine-tuned on N labelled training items (scripts/train_p3.py --n-train;
 ## Against criterion 8
 
 - Not significantly worse at either size, on accuracy or review readiness: **yes**.
-- Better at 100 items on at least one task: **yes**: coding accuracy; coding ρ(top p, agreement); coding errors in review 20%; multinli accuracy; multinli ρ(top p, agreement); multinli errors in review 20%.
+- Better at 100 items on at least one task: **yes**: coding accuracy; coding ρ(top p, agreement); multinli accuracy; multinli ρ(top p, agreement); multinli errors in review 20%.
