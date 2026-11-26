@@ -3,7 +3,7 @@
 All notable changes are recorded here. Versions follow [semantic versioning](https://semver.org/). The release criteria
 for each version are in [docs/RELEASE.md](docs/RELEASE.md).
 
-## 0.1.0 (not yet released)
+## 0.1.0 (2026-11-26)
 
 - The toolkit: packed tree attention on Gemma 4 E4B and 26B A4B with separate global and sliding-window masks, the
   Choice, Score and Noul question types, LoRA adapters with a scorer network, calibration on human labels, and the

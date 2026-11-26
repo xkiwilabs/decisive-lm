@@ -118,9 +118,9 @@ are from the E4B head on Apple silicon, and yours may differ in the last digits:
   means it is spread evenly (section 3.6). It is not the chance that the answer is right. That chance is the top
   probability, 0.986 here, once the head is calibrated for the task (section 3.6).
 - `usage` reports the number of input tokens, the number of answer blocks (one per option here), the time taken (the
-  first request after loading takes several times longer), the confidence method and the head's name (its bundle
-  directory). In Python the optional request field `model` is echoed back unchanged. Over HTTP it chooses the head that
-  answers (section 4.10).
+  first one or two requests after loading take longer, up to a few seconds), the confidence method and the head's name
+  (its bundle directory). In Python the optional request field `model` is echoed back unchanged. Over HTTP it chooses
+  the head that answers (section 4.10).
 
 ## 3.4 Several questions at once
 

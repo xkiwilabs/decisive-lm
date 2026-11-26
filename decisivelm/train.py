@@ -40,6 +40,34 @@ def _target(q, t) -> torch.Tensor | None:
     return torch.tensor([src.probabilities[k] for k in keys])
 
 
+def _hard(target, key: str):
+    """One-hot on the most likely answer; a tie goes to one of the tied answers, picked at random seeded by `key`.
+    A Noul target becomes 1 above 0.5, 0 below, and a seeded coin flip at 0.5."""
+    rng = random.Random(key)
+    if target.noul is not None:
+        v = target.noul
+        return target.model_copy(update={"noul": float(rng.random() < 0.5) if abs(v - 0.5) < 1e-9 else float(v > 0.5)})
+    p = target.probabilities
+    top = max(p.values())
+    pick = rng.choice([k for k, v in p.items() if top - v < 1e-9])
+    return target.model_copy(update={"probabilities": {k: float(k == pick) for k in p}})
+
+
+def harden(record: Record) -> Record:
+    """The record with every human and teacher target replaced by its majority answer (`_hard`): the
+    majority-label ablation of training on rater shares (train_p3.py --hard-targets)."""
+    targets = {}
+    for qid, t in record.targets.items():
+        key = f"{record.id}/{qid}"
+        teacher = t.teacher
+        if isinstance(teacher, list):
+            teacher = [_hard(x, f"{key}/teacher{i}") for i, x in enumerate(teacher)]
+        elif teacher is not None:
+            teacher = _hard(teacher, f"{key}/teacher")
+        targets[qid] = t.model_copy(update={"human": t.human and _hard(t.human, f"{key}/human"), "teacher": teacher})
+    return record.model_copy(update={"targets": targets})
+
+
 def make_items(dlm, records: list[Record]) -> list[Item]:
     items = []
     for r in records:

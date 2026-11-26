@@ -298,19 +298,20 @@ A private coding study (8 codebook categories, four coders, 792 test responses; 
 
 | Measure | 100 items: base | 100: general | Δ (95% CI) | 300 items: base | 300: general | Δ (95% CI) |
 |---|---|---|---|---|---|---|
-| Accuracy against the coders' plurality | 0.866 | 0.919 | +0.052 [+0.036, +0.068] | 0.919 | 0.932 | +0.012 [+0.001, +0.024] |
-| ρ of confidence with coder agreement | 0.473 | 0.577 | +0.104 [+0.076, +0.133] | 0.575 | 0.622 | +0.047 [+0.017, +0.076] |
-| Tie AUROC | 0.744 | 0.750 | +0.006 [−0.017, +0.028] | 0.806 | 0.808 | +0.002 [−0.028, +0.038] |
-| Errors caught by reviewing the least confident 20% | 0.666 | 0.750 | +0.084 [+0.012, +0.167] | 0.670 | 0.815 | +0.145 [+0.053, +0.225] |
-| ECE (lower is better) | 0.072 | 0.060 | −0.012 [−0.027, +0.002] | 0.064 | 0.051 | −0.012 [−0.022, −0.001] |
-| Soft NLL (lower is better) | 0.329 | 0.269 | −0.060 [−0.072, −0.048] | 0.277 | 0.243 | −0.033 [−0.044, −0.024] |
+| Accuracy against the coders' plurality | 0.877 | 0.919 | +0.043 [+0.029, +0.058] | 0.911 | 0.947 | +0.036 [+0.024, +0.049] |
+| ρ of confidence with coder agreement | 0.479 | 0.584 | +0.105 [+0.079, +0.130] | 0.580 | 0.658 | +0.078 [+0.053, +0.104] |
+| Tie AUROC | 0.760 | 0.763 | +0.003 [−0.029, +0.031] | 0.813 | 0.852 | +0.039 [+0.015, +0.065] |
+| Errors caught by reviewing the least confident 20% | 0.705 | 0.730 | +0.025 [−0.077, +0.093] | 0.799 | 0.833 | +0.035 [−0.060, +0.137] |
+| ECE (lower is better) | 0.062 | 0.061 | −0.002 [−0.017, +0.011] | 0.055 | 0.053 | −0.002 [−0.015, +0.008] |
+| Soft NLL (lower is better) | 0.327 | 0.272 | −0.055 [−0.068, −0.043] | 0.270 | 0.223 | −0.047 [−0.057, −0.038] |
 
-On both tasks and at both sizes, starting from the general head gave a fine-tune whose confidence followed human
-agreement more closely and whose review caught more of its errors, and it was not significantly worse on any measure.
-Accuracy was higher on both tasks at both sizes, by 1.2 to 5.2 points. On the coding study the gains in accuracy and in
-ρ are largest with 100 items, and 100 items from the general head came within 1.6 points of a fine-tune from base on all
-2,592 training items (0.935). On MultiNLI the gains are about the same at both sizes. Tie AUROC was slightly higher from
-the general head on MultiNLI at 300 items, and did not differ clearly otherwise. The intervals reflect the sampling of
+On both tasks and at both sizes, starting from the general head gave a fine-tune that was more accurate, by 1.8 to 4.3
+points, and whose confidence followed human agreement more closely. It was not significantly worse on any measure. Its
+review caught more of its errors on MultiNLI at both sizes. On the coding study it caught 2.5 points more at 100 items
+and 3.5 at 300, but neither difference is significant. On the coding study the gains in accuracy and in ρ are largest
+with 100 items, and 100 items from the general head came within 1.7 points of a fine-tune from base on all 2,592
+training items (0.919 against 0.936). On MultiNLI the gains are about the same at both sizes. Tie AUROC was higher from
+the general head at 300 items on both tasks, and did not differ clearly at 100. The intervals reflect the sampling of
 test items, not the spread between seeds. The per-seed values are in `results/c8_general_v5c_e4b_r8_seed0.md`, written
 by `scripts/score_c8.py`.
 

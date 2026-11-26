@@ -127,7 +127,7 @@ mixture-of-experts one, with a sliding window of 8 tokens so short inputs exerci
 - that every response conforms to the request (probabilities over exactly the given options, summing to 1);
 - the data rules: licence tiers, held-out datasets, and the clean-room checks of chapter 16.
 
-In a fresh clone of version 0.1, a clean run ends with a line like `383 passed, 2 skipped, 36 warnings` (the counts grow
+In a fresh clone of version 0.1, a clean run ends with a line like `384 passed, 2 skipped, 36 warnings` (the counts grow
 as tests are added). One skipped test is the HTTP server's, which needs the `serve` extra. The other is the canary test
 of chapter 16, which looks under `data/processed/` and is skipped until that folder exists. The warnings come from tests
 of degenerate inputs: numpy dividing by zero, and calibration warnings that the tests trigger on purpose. All of these

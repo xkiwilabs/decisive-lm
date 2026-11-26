@@ -152,7 +152,7 @@ Things to keep in mind:
 - A few hundred items give wide intervals. An ECE difference of 0.02 is rarely significant at that size.
 - The intervals cover the sampling of test items, not the randomness of training. Fine-tunes that differ only in
   `--seed` can differ by more than an interval. Three fine-tunes from the base model, each trained on the same 100
-  coding items and scored on the same 792 test items, reached ρ(top p, agreement) of 0.44, 0.45 and 0.53
+  coding items and scored on the same 792 test items, reached ρ(top p, agreement) of 0.438, 0.465 and 0.536
   (`results/c8_general_v5c_e4b_r8_seed0.md`). Before choosing between two training setups, train each with two or three
   seeds and compare their spread.
 - On items where raters tie, no answer is wrong. Those items are excluded from accuracy, not counted against the

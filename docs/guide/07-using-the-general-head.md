@@ -67,11 +67,11 @@ The share to review is a trade-off between effort and accuracy. Two numbers meas
 - **accuracy of the rest**: how accurate the answers you accept without review are.
 
 If the model's confidence carried no information, reviewing 20% of the answers would catch 20% of its errors. A
-review-ready model catches more, because its errors concentrate among its least confident answers. In a 20% review,
-the general head caught 60.6% of its errors on the coding study and 47.2% on MultiNLI, but only 21.7–24.5% on
-HelpSteer3 and Measuring Hate Speech, close to the 20% that uninformative confidence would catch
-([model card](../model-card.md)). Its confidence also tends to be low exactly where people disagree, so the reviewed
-set holds the ambiguous items as well as the mistakes.
+review-ready model catches more, because its errors concentrate among its least confident answers. In a 20% review, the
+general head caught 60.8% of its errors on the coding study and 47.2% on MultiNLI, but only 21.7–24.5% on HelpSteer3 and
+Measuring Hate Speech, close to the 20% that uninformative confidence would catch ([model card](../model-card.md)). Its
+confidence also tends to be low exactly where people disagree, so the reviewed set holds the ambiguous items as well as
+the mistakes.
 
 For a Noul, rank by how far the probability is from 0.5, where the model cannot tell: `abs(noul − 0.5)`, smallest
 first.

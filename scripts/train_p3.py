@@ -26,7 +26,7 @@ from decisivelm.infer import QUERY_IDS, DecisiveLM
 from decisivelm.lora import apply_lora, load_lora_state
 from decisivelm.model import backbone_profile, fp32_routers, load_backbone, vision_kwargs
 from decisivelm.render import RENDER_VERSION
-from decisivelm.train import make_items, micro_batches, train_adapter
+from decisivelm.train import harden, make_items, micro_batches, train_adapter
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
@@ -75,6 +75,9 @@ def main():
                          "(Scorer.standardize; needed on 26B A4B). An --init-head bundle brings its own.")
     ap.add_argument("--image-budget", type=int, help="soft tokens per image (default: the backbone profile's)")
     ap.add_argument("--media-root", type=pathlib.Path, help="directory relative media paths resolve against")
+    ap.add_argument("--hard-targets", action="store_true",
+                    help="train, early-stop and calibrate on one-hot majority targets instead of rater shares "
+                         "(decisivelm.train.harden; ties by a seeded pick); gold_test is left as it is")
     ap.add_argument("--adapter", choices=["user", "general"], default="user",
                     help="holdouts to enforce; general also limits train rows to release-tier data")
     a = ap.parse_args()
@@ -87,6 +90,8 @@ def main():
         a.rank, a.alpha = lora["rank"], lora["alpha"]
 
     rows = load_records(a.data)
+    if a.hard_targets:
+        rows = [r if r.split == "gold_test" else harden(r) for r in rows]
     split = collections.defaultdict(list)
     for r in rows:
         split[r.split].append(r)
@@ -174,7 +179,7 @@ def main():
             "render_version": RENDER_VERSION, "init_head": str(a.init_head) if a.init_head else None,
             "init_bundle": str(a.init_bundle) if a.init_bundle else None, "n_train": len(train_rows),
             "dtype": a.dtype, "fp32_router": a.fp32_router, "standardize_rows": a.standardize_rows,
-            "data": str(a.data), "adapter_kind": a.adapter, "seed": a.seed, "image_budget": vision.get("image_budget"),
+            "data": str(a.data), "adapter_kind": a.adapter, "hard_targets": a.hard_targets, "seed": a.seed, "image_budget": vision.get("image_budget"),
             "question_types": dict(collections.Counter(q.type for r in train_rows for q in r.questions.values())),
             "select": criterion, "best_step": best[criterion]["step"],
             "best_val": best[criterion]["value"], "best": best, "history": result["history"]}, indent=1))

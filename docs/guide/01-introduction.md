@@ -58,8 +58,8 @@ measured against human coders. When several people label the same item, some ite
 the coders. A review-ready model is confident on the first kind and unsure on the second. A reviewer who checks only its
 least confident 20% of answers then catches more than the 20% of its errors that a confidence with no information would
 catch. On a study of coding free-text responses (Alhasan, Diaz Monfort & Richardson, *Knowing which responses to check*,
-under review), the least confident 20% of the E4B general head's answers (section 1.4) held 60.6% of its errors
-zero-shot, against 41.9% for the prompted base model ([model card](../model-card.md)). The measures come from that
+under review), the least confident 20% of the E4B general head's answers (section 1.4) held 60.8% of its errors
+zero-shot, against 42.2% for the prompted base model ([model card](../model-card.md)). The measures come from that
 study:
 
 - **Tracking**: the rank correlation between the model's confidence and how much the human coders agreed on each

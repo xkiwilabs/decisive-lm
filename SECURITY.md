@@ -12,8 +12,8 @@ Fixes are made on the latest release and on `main`.
 ## Things to know
 
 - **Secrets stay out of configs.** Keep server addresses, keys and tokens in the untracked `configs/local.yaml` or in
-  environment variables, never in a committed file. The release export (`scripts/export_release.py`) fails if it
-  finds anything shaped like a credential.
+  environment variables, never in a committed file. Each release snapshot is checked for anything shaped like a
+  credential before it is published.
 - **Bundles contain PyTorch files.** Their `.pt` files are loaded with `torch.load(..., weights_only=True)`, which
   refuses to run code stored in a file. A crafted file can still hold wrong weights. Even so, load bundles only from
   sources you trust.

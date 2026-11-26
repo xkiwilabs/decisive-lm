@@ -76,11 +76,10 @@ Each question may carry a **human** target, a **teacher** target, or both.
   explains each). A question may carry a list of teacher targets when several teachers labelled it. Data with human
   labels only has no teacher targets, so these fields do not arise.
 
-**Store the raters' label shares, never only the majority vote.** If three of five annotators chose level 3 and one
-each chose levels 2 and 4, the target is `{"2": 0.2, "3": 0.6, "4": 0.2}`. The share lets a model's confidence follow
-human disagreement. A model trained on majority votes learns that every item is certain. If each item has a
-single label, the target is one-hot. For example, `{"billing": 1.0, "technical": 0.0, "sales": 0.0}` with `n_raters`
-left out or set to 1.
+**Store the raters' label shares, never only the majority vote.** If three of five annotators chose level 3 and one each
+chose levels 2 and 4, the target is `{"2": 0.2, "3": 0.6, "4": 0.2}`. The share lets a model's confidence follow human
+disagreement. Majority votes tell a model that every item is certain. If each item has a single label, the target is
+one-hot. For example, `{"billing": 1.0, "technical": 0.0, "sales": 0.0}` with `n_raters` left out or set to 1.
 
 Training uses the human target where there is one, and otherwise the teacher target. Calibration and every acceptance
 gate (a pass-or-fail release criterion for the general head, [chapter 15](15-release-criteria.md)) use human targets

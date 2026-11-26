@@ -94,3 +94,16 @@ def test_training_skips_a_micro_batch_with_no_targets():
     result = train_adapter(model, items, items, epochs=2, rows_per_step=2, max_tokens=budget, lr_lora=5e-3,
                            lr_head=5e-3, eval_every=2, patience=100, seed=0, checkpointing=False)
     assert len(result["history"]) > 1
+
+
+def test_harden_takes_the_majority_and_breaks_ties_by_a_seeded_pick():
+    from decisivelm.train import harden
+    h = harden(ROWS[3])
+    assert h.targets["d"].human.probabilities == {"billing": 1.0, "technical": 0.0, "sales": 0.0}
+    assert h.targets["u"].human.noul in (0.0, 1.0)                    # exactly 0.5: a coin flip
+    assert harden(ROWS[0]).targets["u"].human.noul == 0.0 and harden(ROWS[1]).targets["u"].human.noul == 1.0
+    tie = record(9, "x", {"billing": 0.4, "technical": 0.4, "sales": 0.2})
+    picks = harden(tie).targets["d"].human.probabilities
+    assert sorted(picks.values()) == [0.0, 0.0, 1.0] and picks["sales"] == 0.0
+    assert harden(tie) == harden(tie)                                    # reproducible
+    assert ROWS[3].targets["d"].human.probabilities["billing"] == 0.75   # the input is not changed
